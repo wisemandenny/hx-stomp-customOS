@@ -52,6 +52,10 @@ GR_METER = bytes.fromhex(open(os.path.join(os.path.dirname(os.path.abspath(__fil
 RX_CB_LIT, RX_CB_ROM = 0x28da6134, 0x10001095                       # the receive callback of the DSP stream (frames of 256 words)
 HOME_CTOR_CALL, HOME_CTOR = 0x28d96c44, 0x28dc91d0                   # bl to the Home view's constructor at boot
 HOME_PAINT_LIT, HOME_PAINT = 0x28d96e28, 0x28dc8d39                  # the Home view's paint function, as registered
+# Experiment (HX_DSP_METER=1): the per-block DSP usage meter on the Edit view's block slots (src/m4/dsp_meter.s).
+DSP_METER = os.environ.get('HX_DSP_METER') and bytes.fromhex(
+    open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dsp_meter.hex')).read().strip())
+EDIT_PAINT_LIT, EDIT_PAINT = 0x28d96da0, 0x28dc27f9                  # the Edit view top half's paint function (block slots), as registered
 CAT_PAGES = (TUNER_ID, LOCK_ID, EMPTY_SLOT)   # three slots a page
 # Sites that switch on the category with `cmp rN,#5; bhi exit; tbb`: (hook, cat reg, page reg, table reg, tbb, exit, stub).
 # The stub is category 2's generic case entered after its table load: it sets the slot in r4 itself, which some cases leave to the category.
@@ -400,6 +404,8 @@ def menu_entry0(e0):
         expect(HOME_CTOR_CALL, bl(HOME_CTOR_CALL, HOME_CTOR), 'the Home view constructor call')
         if u32(HOME_PAINT_LIT) != HOME_PAINT:
             raise SystemExit('patch-menu: the Home view paint function is not the stock one')
+    if DSP_METER and u32(EDIT_PAINT_LIT) != EDIT_PAINT:
+        raise SystemExit('patch-menu: the Edit view paint function is not the stock one')
     expect(TEXT_FN, TEXT_FN_STOCK, 'the value-text function')
     expect(TAP_SITE, TAP_SITE_STOCK, 'the tap-tempo call')
     expect(NAV_CMP, NAV_CMP_STOCK, 'the category navigation')
@@ -444,6 +450,8 @@ def menu_entry0(e0):
         put(RX_CB_LIT, struct.pack('<I', gr_va | 1))
         put(HOME_CTOR_CALL, bl(HOME_CTOR_CALL, gr_va + 4))
         put(HOME_PAINT_LIT, struct.pack('<I', (gr_va + 8) | 1))
+    if DSP_METER:
+        put(EDIT_PAINT_LIT, struct.pack('<I', cave.add(DSP_METER) | 1))
     if PROBE:
         put(RX_CB_LIT, struct.pack('<I', cave.add(rx_cave(cave.next(), latched)) | 1))
     else:
@@ -464,7 +472,8 @@ def menu_entry0(e0):
 def patch_menu(l6ia_bytes, log=print):
     e0 = pa.get_entry_swapped(l6ia_bytes, 0)
     new_l6ia, _, _ = l6ia.rebuild_archive(l6ia_bytes, {0: menu_entry0(e0)})
-    log('[+] Entry 0: Global Settings > CustomOS (Tuner Activation, Lock Tuner Settings' + (', GR meter hooks' if GR else '') + ')')
+    log('[+] Entry 0: Global Settings > CustomOS (Tuner Activation, Lock Tuner Settings' + (', GR meter hooks' if GR else '') +
+        (', DSP meter hook' if DSP_METER else '') + ')')
     return new_l6ia
 
 
