@@ -54,6 +54,7 @@ var SOURCES = [
   "tools/features/__init__.py",
   "tools/features/bpm.py",
   "tools/features/dsp_meter.py",
+  "tools/features/gr.py",
   "tools/features/tuner.py",
   "tools/kit_patch_amp.py",
   "tools/sharc/entry4_blob.py",
