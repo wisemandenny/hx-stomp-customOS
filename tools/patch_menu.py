@@ -56,7 +56,11 @@ HOME_PAINT_LIT, HOME_PAINT = 0x28d96e28, 0x28dc8d39                  # the Home 
 DSP_METER = os.environ.get('HX_DSP_METER') and bytes.fromhex(
     open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dsp_meter.hex')).read().strip())
 EDIT_PAINT_LIT, EDIT_PAINT = 0x28d96da0, 0x28dc27f9                  # the Edit view top half's paint function (block slots), as registered
-CAT_PAGES = (TUNER_ID, LOCK_ID, EMPTY_SLOT)   # three slots a page
+# DSP Disp (read by src/m4/dsp_meter.s): ID 102 has an empty label, the stock 0..1 limits entry and no stock reader
+DSP_DISP_ID, DSP_DISP_LABEL, DSP_DISP_LIMITS = 102, b'DSP\nDisp', (0, 2)
+DSP_DISP_VALUES = (b'Used/All', b'Free', b'Used%')   # values show 8 characters, on one line
+LIMITS_TAIL, LIMITS_TAIL_STOCK = 0x28e1ed36, bytes.fromhex('0372')     # stores type r3, default r2, min r1, max r4; strb r3,[r0,#8]
+CAT_PAGES = (TUNER_ID, LOCK_ID, DSP_DISP_ID if DSP_METER else EMPTY_SLOT)   # three slots a page
 # Sites that switch on the category with `cmp rN,#5; bhi exit; tbb`: (hook, cat reg, page reg, table reg, tbb, exit, stub).
 # The stub is category 2's generic case entered after its table load: it sets the slot in r4 itself, which some cases leave to the category.
 SITES = {
@@ -378,6 +382,8 @@ def menu_entry0(e0):
         if e0[off(tab + NAME_LEN * 22, 8):][:8] != b'Main LCD':
             raise SystemExit(f'patch-menu: label array at {tab:#x} is not the stock one')
         labels = ((TUNER_ID, PROBE_PAGE_LABEL if PROBE else TUNER_LABEL), (LOCK_ID, PROBE_WORD_LABEL if PROBE else LOCK_LABEL))
+        if DSP_METER:
+            labels += ((DSP_DISP_ID, DSP_DISP_LABEL),)
         for pid, label in labels:
             o = off(tab + NAME_LEN * pid, NAME_LEN)
             if any(e0[o:o + NAME_LEN]):
@@ -406,6 +412,20 @@ def menu_entry0(e0):
             raise SystemExit('patch-menu: the Home view paint function is not the stock one')
     if DSP_METER and u32(EDIT_PAINT_LIT) != EDIT_PAINT:
         raise SystemExit('patch-menu: the Edit view paint function is not the stock one')
+    if DSP_METER:
+        # no stock limits code is 0..2 with default 0, and the tbh table reaches no cave
+        expect(LIMITS_TAIL, LIMITS_TAIL_STOCK, 'the limits code tail')
+        entry = struct.unpack_from('<H', e0, off(LIMITS_TAB_HIGH + 2 * (DSP_DISP_ID - 0x3f), 2))[0]
+        if LIMITS_TAB_HIGH + 2 * entry != ENUM01_TARGET:
+            raise SystemExit(f'patch-menu: setting {DSP_DISP_ID} has no enum limits entry')
+        at = NAMES_LONG + NAME_LEN * DSP_DISP_ID + len(DSP_DISP_LABEL) + 1
+        at += at & 1
+        default, top = DSP_DISP_LIMITS
+        code = struct.pack('<4H', 0x2302, 0x2200 | default, 0x2100, 0x2400 | top) + pa.thumb_bw(at + 8, LIMITS_TAIL)
+        if at + len(code) > NAMES_LONG + NAME_LEN * (DSP_DISP_ID + 1):
+            raise SystemExit(f'patch-menu: the limits code of setting {DSP_DISP_ID} does not fit its label slot')
+        put(at, code)
+        put(LIMITS_TAB_HIGH + 2 * (DSP_DISP_ID - 0x3f), struct.pack('<H', (at - LIMITS_TAB_HIGH) // 2))
     expect(TEXT_FN, TEXT_FN_STOCK, 'the value-text function')
     expect(TAP_SITE, TAP_SITE_STOCK, 'the tap-tempo call')
     expect(NAV_CMP, NAV_CMP_STOCK, 'the category navigation')
@@ -438,6 +458,8 @@ def menu_entry0(e0):
         values = {TUNER_ID: cave.add(b''.join(padded(v) for v in TUNER_VALUES)),
                   LOCK_ID: cave.add(b''.join(padded(v) for v in LOCK_VALUES))}
         latched = None
+    if DSP_METER:
+        values[DSP_DISP_ID] = cave.add(b''.join(padded(v) for v in DSP_DISP_VALUES))
 
     put(NAV_CMP, b'\x06\x2b')
     put(NAV_WRAP, b'\x06\x21')
@@ -473,7 +495,7 @@ def patch_menu(l6ia_bytes, log=print):
     e0 = pa.get_entry_swapped(l6ia_bytes, 0)
     new_l6ia, _, _ = l6ia.rebuild_archive(l6ia_bytes, {0: menu_entry0(e0)})
     log('[+] Entry 0: Global Settings > CustomOS (Tuner Activation, Lock Tuner Settings' + (', GR meter hooks' if GR else '') +
-        (', DSP meter hook' if DSP_METER else '') + ')')
+        (', DSP meter hook and DSP Disp' if DSP_METER else '') + ')')
     return new_l6ia
 
 

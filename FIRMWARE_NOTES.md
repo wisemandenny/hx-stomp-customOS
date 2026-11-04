@@ -39,7 +39,8 @@ Goal: a completely custom firmware for the HX Stomp, built in small steps, each 
 ### Settings (Global Settings) [verified on unit]
 
 - Global Settings has 6 stock sections; `tools/patch_menu.py` adds a 7th, **"CustomOS"**. Entries are identified by a setting ID and carry a label (`b'Section\nName'`), a limits object, and a value-string table.
-- Shipped: **Tuner Activation** (Hold/Press, ID 29) and **Lock Tuner Settings** (Off/On, ID 104).
+- Shipped: **Tuner Activation** (Hold/Press, ID 29) and **Lock Tuner Settings** (Off/On, ID 104). `HX_DSP_METER` builds add **DSP Disp** (Used/All, Free, Used%; ID 102, limits code 0..2 in its label slot's tail) in the page's third slot.
+- **Value strings show 8 characters, on one line** [verified on unit]: longer ones are cut off, and unlike the labels a `\n` does not start a second line.
 - `GET_VALUE` at `0x28e1f844` (call as `0x28e1f845`): `(id, out)`, result at `[out+4]`; the buffer must be at least 8 bytes.
 - Limits code for an int 0..3: `0x28e1ed1c`.
 - `HX_PROBE` reuses IDs 29 and 104 for its knobs and so disables the tuner features. `HX_GR` has no Global Settings: the meter is set by the compressor block's GR knobs. (Earlier GR images used IDs 102, 128 and 126 on a second CustomOS page; the settings reader `0x28e1f844` keeps IDs up to `0x95` in one store, and those three have empty labels, the stock 0..1 limits entry, and no stock reader.)
@@ -70,6 +71,10 @@ Goal: a completely custom firmware for the HX Stomp, built in small steps, each 
 - Two-digit test (number + 10, not committed) **[verified on unit]**: 11, 12, ... at 2x, centred, also lifted.
 - **DSP-percentage** image (MD5 `3c4c6abeec7b0c4b47fd7ea363209d74`): each block showed `(cost + 50) / 100`, with the cost from `0x28e01d50` applied to the DSP model's block record. Result **[verified on unit]**: rendering fine, but most blocks showed 0 and only some amps a value (23): the record's `[0]` is not the kind byte the cost function wants (effects are kinds 1..0x15 in the load descriptor, `0x28df51ba`, while their record `[0]` is evidently 0, which the cost function prices at 0).
 - **Block-object cost** image (MD5 `c900864da4748e250de912c11d49d449`): the cost is the block object's own `+0x44`, found from the slot through the record's handle (see [DSP cost accounting](#dsp-cost-accounting-verified-offline)); the cost function is no longer called. Result **[verified on unit]**: effects show non-zero values, amps 8..37, NAM A2 Lite 23; numbers change with the model and follow blocks on both rows.
+- **Edit view** [verified offline]: the top strip has the block title at the left (labels `+0x5c` at x 7 and `+0x8c` at x 0x45, top edge y 0xea) and a 6x9 marker (`+0x704`, image 0x43) placed 6 px after the title (`0x28dc2026`); the top right corner is free unless the title is very long.
+- **DSP total** image (MD5 `4cc7765b3ba3bb2fc527650b454e76d7`): the Edit view's top right corner shows the preset's total `[[dsp + 0x43fc] + 0xa88]` (read under the DSP model lock) in white 3x5 glyphs at 2x, right edge x 316, top y 232, as Global Settings > CustomOS > DSP Disp says: `62/90` (used/limit), `28` (remaining, 90 - used) or `62%`. The box x 270..316, y 222..232 is cleared to black first each paint, so a shorter value leaves nothing behind. Block numbers and the total share one glyph routine (`put`, glyphs 0..9, `/`, `%`). Result **[verified on unit]**: the setting steps and stops at its ends, the total shows and updates in all three formats without leftovers and clear of the title; but the values were cut off ("Used / Limit" over 8 characters), and the fixed 15% in the numerator made the blocks' numbers not add up to it.
+- **Blocks' budget** image (MD5 `2dc3b2d40117806ad3b0828ee380aa3a`): the numerator is the sum of the blocks' rounded per cents over all 16 block records, the denominator what blocks may use, 75 (9000 - 1500); DSP Disp has four values, at most 8 characters a line: `Used /\nLimit` (`47/75`), `Remain` (`28`), `Used\nPercent` (`63%`, of 75) and `Remain\nPercent` (`37%`, 100 less the used per cent). The preset total `0xa88` is no longer read. Result **[verified on unit]**: the numbers add up, `0/75` for an empty preset, all formats update without leftovers; but the two-line values were still cut off.
+- **Short-names** image (MD5 `98485171ae10228b67a41e236f127071`): DSP Disp is `Used/All` (`47/75`), `All-Used` (`28`) or `Used%` (`63%`, of 75), limits 0..2. Result **[verified on unit]**: all three read in full and behave as named; `All-Used` was renamed `Free` (75 - used) for clarity.
 - **[hypothesis]** Calling these from the DSP-link thread during boot, before the Home view exists, is a candidate cause of a freeze after the loading bar. See [Open problem](#open-problem-the-gain-reduction-meter).
 
 ### DSP cost accounting [verified offline]
@@ -145,7 +150,7 @@ The M4 decides what fits on the DSP from fixed per-model costs, not from measure
 | `src/sharc/frame_probe.asm` | DSP-side wrapper and frame-tail writer (test image). |
 | `src/m4/gr_meter.s` | M4 receive hook, Home constructor and paint hooks: the ten-light GR meter and its Position, Direction and Thickness settings. |
 | `tools/gr_meter.hex` | Generated by `python3 tools/m4asm.py src/m4/gr_meter.s \| tail -1 > tools/gr_meter.hex`. |
-| `src/m4/dsp_meter.s` | Edit view paint hook: the per-block DSP usage meter (each block's DSP cost in per cent). `HX_DSP_METER=1` builds it. |
+| `src/m4/dsp_meter.s` | Edit view paint hook (each block's DSP cost, the preset's total by DSP Disp): the per-block DSP usage meter (each block's DSP cost in per cent). `HX_DSP_METER=1` builds it. |
 | `tools/dsp_meter.hex` | Generated by `python3 tools/m4asm.py src/m4/dsp_meter.s \| tail -1 > tools/dsp_meter.hex`. |
 
 Build commands:
