@@ -22,9 +22,9 @@ NAMES_LONG, NAMES_SHORT, NAME_LEN = 0x28e25624, 0x28e26498, 27   # 'Page\nName' 
 EMPTY_SLOT = 0x17e
 GET_VALUE = 0x28e1f844           # (ID, out): the value at out + 4
 
-# Limits come from the tbh tables at 0x28e1ead4 (ID 18's entry is an enum 0..1). The settings reader keeps IDs up to 0x95 in one store.
+# Limits come from the tbh tables at 0x28e1ead4 (ID 18's entry is an enum 0..1). The main store keeps records for IDs up to 0x88 only.
 LIMITS_TAB_LOW, LIMITS_TAB_HIGH = 0x28e1ebbc, 0x28e1eaf0         # tbh bases for IDs 1..0x37 and 0x3f..0x9a
-MAIN_STORE_IDS = (*range(1, 0x38), *range(0x3f, 0x96))
+MAIN_STORE_IDS = (*range(1, 0x38), *range(0x3f, 0x89))
 ENUM01_TARGET = 0x28e1ec66       # limits code for an integer 0..1, default 0
 LIMITS_TAIL, LIMITS_TAIL_STOCK = 0x28e1ed36, bytes.fromhex('0372')     # stores type r3, default r2, min r1, max r4; strb r3,[r0,#8]
 TEXT_FN, TEXT_FN_STOCK, TEXT_FN_CONT = 0x28d9775c, bytes.fromhex('30b5 85b0'), 0x28d97760   # (ID, value) -> text; push {r4,r5,lr}; sub sp,#0x14
@@ -136,7 +136,7 @@ def cmp_imm(r, i):
 def limits_entry(pid):
     """(tbh base, address of the ID's entry) of a main-store ID."""
     if pid not in MAIN_STORE_IDS:
-        raise SystemExit(f'patch-menu: setting ID {pid} is not in the settings reader\'s main store (1..0x37, 0x3f..0x95)')
+        raise SystemExit(f'patch-menu: setting ID {pid} is not in the settings reader\'s main store (1..0x37, 0x3f..0x88)')
     return (LIMITS_TAB_LOW, LIMITS_TAB_LOW + 2 * (pid - 1)) if pid < 0x38 else (LIMITS_TAB_HIGH, LIMITS_TAB_HIGH + 2 * (pid - 0x3f))
 
 

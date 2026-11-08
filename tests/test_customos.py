@@ -26,6 +26,22 @@ def test_ids_claimed_once():
     assert all(pid in pm.MAIN_STORE_IDS for pid in pids)
 
 
+def test_main_store_ends_at_0x88():
+    assert max(pm.MAIN_STORE_IDS) == 0x88 and pm.limits_entry(0x88)
+    for pid in (0x89, 0x95):
+        with pytest.raises(SystemExit, match='0x3f..0x88'):
+            pm.limits_entry(pid)
+
+
+@pytest.mark.firmware
+def test_stock_main_store_has_no_record_above_0x88():
+    """The store's get, its write and the label function all stop at 0x88: IDs 0x89..0x95 have no record."""
+    read = reader(stock_e0())
+    assert read(0x28e1efd8, 2) == bytes.fromhex('882c')     # get: cmp r4,#0x88
+    assert read(0x28e1f0dc, 2) == bytes.fromhex('8828')     # store write: cmp r0,#0x88
+    assert read(0x28d97708, 2) == bytes.fromhex('8828')     # long label: cmp r0,#0x88
+
+
 def test_no_avoided_id_is_claimed():
     assert [pid for pid, name, note in setting_ids.IDS if name and note.startswith('avoid')] == []
 
