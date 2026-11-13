@@ -147,7 +147,7 @@ Every build has all of these + NAM A2 Lite.
 
 *Knobs on the Deluxe, LA Studio, Kinky, Ampeg Opto, Rochester and Red Squeeze compressors*
 
-- **Mtr Thk** (0 … 20): the meter's thickness in pixels; 0, the default, turns it off.
+- **Mtr Size** (Off, S, M, L, XL): the meter's thickness, 5, 10, 15 or 20 pixels; Off is the default. A preset saved with an older build's Mtr Thk opens at S for 1 px, M for 2, L for 3 and XL for 4 or more.
 - **Mtr Pos** (Middle, Top, Left, Bottom, Right): where on the Home screen the meter lights up to show how much the compressor is reducing the gain. Middle takes the place of the line across the middle.
 - **Mtr Dir** (Normal, Reverse): Normal fills left to right or top to bottom; Reverse the other way.
 
