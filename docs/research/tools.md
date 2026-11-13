@@ -6,7 +6,7 @@ The repository's tools and the build switches. Status tags as in [conventions.md
 | --- | --- |
 | `build.py` | Whole pipeline. `HX_GR=1` builds NAM with two slots (`GR_SLOTS`) and runs `tools/patch_comp.py` last. |
 | `tools/l6ia.py`, `tools/l6ia_verify.py`, `tools/hxf.py` | Container parse/rebuild/verify/pack. |
-| `tools/patch_amp.py` | Add models, IR titles, SHARC kernel, `--wrap-prim`. |
+| `tools/patch_amp.py` | Add models, IR titles, NAM's Model as a whole number (`model-int`), SHARC kernel, `--wrap-prim`. |
 | `tools/patch_menu.py` | The feature categories of Global Settings and the engine that builds in the features of `tools/features/`. |
 | `tools/features/` | One module a feature: settings, flag, inputs, hooks. |
 | `tools/image_store.py` | Reads the image store: Entry 7's image and font records, Entry 8's items. |

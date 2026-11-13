@@ -64,7 +64,8 @@ NAM_EQ = [
     ["move-folder", "--name", "NAM", "--from", "2", "--to", "12"],
     ["ir-title", "--fx-preset-id", "555", "--knob", "6"],
 ]
-STEPS = {"HX_Stomp": NAM_EQ, "HX_Stomp_XL": NAM_EQ, "HX_Effects": [["effects-eq"]]}
+# model-int: NAM's Model as a whole number; the XL's formatter addresses are not known yet.
+STEPS = {"HX_Stomp": NAM_EQ + [["model-int"]], "HX_Stomp_XL": NAM_EQ, "HX_Effects": [["effects-eq"]]}
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
