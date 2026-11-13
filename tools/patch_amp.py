@@ -23,6 +23,10 @@ Commands:
       edit-screen title, as an IR block does. Changes Entry 0 (the main
       processor's program) only.
 
+  model-int <in> <out>
+      HX Stomp: a float knob shown as a dynamicList (NAM's Model) reads as a
+      whole number, truncated as the kernel plays it ("4", not "4.0").
+
   patch <in> <out> --asm nam_lite.asm
       Assemble the kernel (tools/sharc/sasm.py), add it to the SHARC boot
       stream (Entry 2) and point primitive 0x9c75 at it.
@@ -940,21 +944,27 @@ def ir_title_entry0(e0, pids, fx_pids=()):
         if bad:
             raise SystemExit(f'ir-title: preset_id {p} is in browser list(s) {bad}: IR, or subcategory 1')
 
-    s6_hdr_off, s6_poff, s6_slen, s6_dst, s6_next_off = segs[6]
-    assert s6_slen % 4 == 0 and s6_next_off <= len(e0)
-    cave_va = s6_dst + s6_slen
+    cave_va = segs[6][3] + segs[6][2]
     cave, ca, cb = ir_title_cave(cave_va, pids, X, fx_pids)
     vwrite(X.SITE_A, thumb_bw(X.SITE_A, ca) + b'\x00\xbf')
     vwrite(X.SITE_B, thumb_bw(X.SITE_B, cb) + b'\x00\xbf')
-    new_s6_slen = s6_slen + len(cave)
-    out_e0 = bytearray(e0[:s6_next_off]) + cave
+    out_e0 = _e0_append_code(e0, segs, cave)
+    return out_e0, {'pids': pids + fx_pids, 'fx_pids': fx_pids, 'cave': cave_va, 'caveA': ca, 'caveB': cb, 'cave_len': len(cave)}
+
+
+def _e0_append_code(e0, segs, code):
+    """Entry 0 (bytes, CRCs fixed) with code appended to seg[6], at seg[6]'s end address."""
+    s6_hdr_off, s6_poff, s6_slen, s6_dst, s6_next_off = segs[6]
+    assert s6_slen % 4 == 0 and s6_next_off <= len(e0)
+    new_s6_slen = s6_slen + len(code)
+    out_e0 = bytearray(e0[:s6_next_off]) + code
     out_e0 += b'\x00' * ((-len(out_e0)) & 3)
     struct.pack_into('<3I', out_e0, s6_hdr_off, new_s6_slen, s6_dst, s6_poff + new_s6_slen)
     struct.pack_into('<I', out_e0, 4, len(out_e0))
     out_e0 = bytes(l6ia.fix_internal_crcs(out_e0))
     if len(out_e0) > E0_MAX:
         raise SystemExit(f'Entry 0 would be {len(out_e0):#x} bytes; its partition holds {E0_MAX:#x}')
-    return out_e0, {'pids': pids + fx_pids, 'fx_pids': fx_pids, 'cave': cave_va, 'caveA': ca, 'caveB': cb, 'cave_len': len(cave)}
+    return out_e0
 
 
 def ir_title(l6ia_bytes, pids, log=print, fx_pids=()):
@@ -1684,6 +1694,66 @@ def ir_title_knob_cave(cave_va, X, K, fx_pids, knob):
     return bytes(out), cave_va + labels['caveA'], cave_va + labels['caveB']
 
 
+# Only NAM's Model is a float dynamicList (stock ones are ints), so that case can print no decimals, truncated as the kernel plays it.
+MODEL_INT = {
+    0x28d8fa80: types.SimpleNamespace(      # HX Stomp
+        FORMAT=0x28dfe940,                  # (ctx, param, value, buf, [sp] len, [sp+4] 1); 0 or a negative error
+        TBH=0x28dfeab8,                     # the float switch's table: tbh [pc, r3, lsl #1], r3 = display type - 1
+        LOAD=0x28dfea54,                    # vldr s16, [r9, #4]: the float's value
+        NO_DECIMALS=0x28dff684,             # movs r1, #0; b.w the print (the >= 50 case)
+        STOCK={0x28dfeab4: 'dfe813f0', 0x28dfeace: '0b01', 0x28dfea54: '99ed018a', 0x28dff684: '0021fff73bbb'}),
+}
+DISPLAY_DYNAMIC_LIST = 12               # "dynamicList" as the display type getter 0x28dfe520 returns it at [sp, #11]
+
+
+def model_int_cave():
+    """The cave: the stock load, then truncate when the display type is a dynamicList."""
+    return bytes.fromhex('99ed018a'                  # vldr s16, [r9, #4]
+                         '9df80bc0'                  # ldrb.w ip, [sp, #11]: BL left the formatter's sp as it was
+                         'bcf1' + f'{DISPLAY_DYNAMIC_LIST:02x}' + '0f'   # cmp.w ip, #12
+                         '04bf'                      # itt eq
+                         'bdeec88a'                  # vcvteq.s32.f32 s16, s16 (toward zero)
+                         'b8eec88a'                  # vcvteq.f32.s32 s16, s16
+                         '7047')                     # bx lr
+
+
+def model_int_entry0(e0):
+    """Entry 0 with every float dynamicList knob shown as a whole number. Returns (e0, info)."""
+    e0 = bytearray(e0)
+    segs = _parse_e0_segments(e0)
+    X = MODEL_INT.get(segs[6][3])
+    if X is None:
+        raise SystemExit(f'model-int: no formatter addresses known for the {e0_device(segs).NAME}')
+
+    def vread(va, ln):
+        fo = _e0_vaddr_to_foff(segs, va, ln)
+        return bytes(e0[fo: fo + ln])
+
+    def vwrite(va, data):
+        fo = _e0_vaddr_to_foff(segs, va, len(data))
+        e0[fo: fo + len(data)] = data
+
+    for va, want in X.STOCK.items():
+        if vread(va, len(want) // 2) != bytes.fromhex(want):
+            raise SystemExit(f'model-int: Entry 0 at {va:#x} is {vread(va, len(want) // 2).hex()}, not the stock {want}')
+    cave_va = segs[6][3] + segs[6][2]
+    entry = X.TBH + 2 * (DISPLAY_DYNAMIC_LIST - 1)
+    vwrite(entry, struct.pack('<H', (X.NO_DECIMALS - X.TBH) // 2))
+    vwrite(X.LOAD, _thumb_bl(X.LOAD, cave_va))
+    cave = model_int_cave()
+    return _e0_append_code(e0, segs, cave), {'cave': cave_va, 'cave_len': len(cave), 'entry': entry}
+
+
+def cmd_model_int(args):
+    l6ia_bytes, is_hxf = load_l6ia_from_any(args.input)
+    e0 = get_entry_swapped(l6ia_bytes, 0)
+    new_e0, info = model_int_entry0(e0)
+    new_l6ia, _, _ = l6ia.rebuild_archive(l6ia_bytes, {0: new_e0})
+    print(f"[+] Entry 0: float dynamicList knobs as whole numbers: cave {info['cave_len']} B at {info['cave']:#x}")
+    save_l6ia_to_any(new_l6ia, args.output, donor_hxf=args.input if is_hxf else args.donor)
+    print(f"[+] Wrote {args.output}")
+
+
 def cmd_add_model(args):
     l6ia_bytes, is_hxf = load_l6ia_from_any(args.input)
     e0 = get_entry_swapped(l6ia_bytes, 0)
@@ -1968,6 +2038,11 @@ def main():
                        help="the Model knob's index, a float knob (the 4-knob NAM: 0); outside 1..128 the title reads <EMPTY>")
     p_irt.add_argument('--donor', help='Stock .hxf of the unit, when input is a raw L6IA and output a .hxf')
 
+    p_mi = sub.add_parser('model-int', help="HX Stomp: a float knob shown as a dynamicList (NAM's Model) reads as a whole number")
+    p_mi.add_argument('input', help='Input .hxf or L6IA')
+    p_mi.add_argument('output', help='Output .hxf or L6IA')
+    p_mi.add_argument('--donor', help='Stock .hxf of the unit, when input is a raw L6IA and output a .hxf')
+
     p_rm = sub.add_parser('remove-model', help="Remove a stock model's Table 1 row and browser items (frees its preset_id)")
     p_rm.add_argument('input', help='Input .hxf or L6IA')
     p_rm.add_argument('output', help='Output .hxf or L6IA')
@@ -1998,7 +2073,7 @@ def main():
 
     args = ap.parse_args()
     {'add-model': cmd_add_model, 'add-fx-model': cmd_add_fx_model, 'inspect': cmd_inspect, 'ir-title': cmd_ir_title,
-     'patch': cmd_patch, 'remove-model': cmd_remove_model, 'move-folder': cmd_move_folder,
+     'model-int': cmd_model_int, 'patch': cmd_patch, 'remove-model': cmd_remove_model, 'move-folder': cmd_move_folder,
      'effects-eq': cmd_effects_eq}[args.cmd](args)
 
 
