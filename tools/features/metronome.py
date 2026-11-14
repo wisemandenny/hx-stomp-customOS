@@ -33,6 +33,11 @@ LOOPER_TESTS = (
     (0x28de02fc, '9df83420', 'metronome_cat_r2_34', "a block change: a looper's bypass assignments dropped"),
 )
 
+# The footswitch assign (0x28dd8478) clears instead of assigning a block whose block category is None or Unknown: give it Volume's
+ASSIGN_CATEGORY, BLOCK_CATEGORY = 0x28dd84d8, 0x28e0f064
+# (block category, on) -> a footswitch's LED colour, for categories 4..0x16 only, so the Metronome's would be the default white
+LED_COLOUR, LED_COLOUR_STOCK = 0x28db7e1c, bytes.fromhex('0438 1228')     # subs r0, #4; cmp r0, #0x12
+
 
 def apply(p):
     m = p.module('src/m4/metronome.s')
@@ -41,6 +46,12 @@ def apply(p):
     for site, stock, stub, what in LOOPER_TESTS:
         p.expect(site, bytes.fromhex(stock), what)
         p.put(site, pm.bl(site, m[stub]), what)
+    p.own_call(ASSIGN_CATEGORY, BLOCK_CATEGORY, "the footswitch assign's block category", m['metronome_assign_cat'])
+    hook = p.own_entry(LED_COLOUR, LED_COLOUR_STOCK, "the footswitch LED's colour lookup")
+    a = pm.Asm(p.next())
+    a.movw_movt(12, hook.stock | 1)
+    a.bw(m['metronome_led_colour'])
+    hook.to(p.add(a.bytes()))
 
     e7, e8 = p.entry(7), p.entry(8)
     icon = pm.ICONS['Icon_Tempo']

@@ -5,6 +5,9 @@
 .equ PRESET_ID, 181                 @ tools/patch_click.py PRESET_ID
 .equ TEAL, 0x10                     @ Volume/Pan's browser category
 .equ NOT_LOOPER, 5                  @ Modulation, the Tremolo it is copied from: no Looper test site treats it specially
+.equ BLOCK_CATEGORY, 0x28e0f065     @ (model, preset ID, &category) -> <0 on error; 0x19 for a model without Entry 3's category
+.equ VOLUME, 0x0e                   @ Volume's block category, teal like the Metronome's
+.equ METRONOME, 0x19                @ the Metronome's block category: tools/features/metronome.py METRONOME
 
 metronome_slot:                     @ at 0x28dd3042, for ldrb.w r2, [sp, #0x10]: the block info at sp+4 has its preset model ID at +1
     ldrb.w r2, [sp, #0x10]
@@ -33,3 +36,22 @@ category_load metronome_cat_r3_28, r3, 0x28
 category_load metronome_cat_r3_38, r3, 0x38
 category_load metronome_cat_r3_48, r3, 0x48
 category_load metronome_cat_r2_34, r2, 0x34
+
+@ The footswitch assign clears a block of category None or Unknown (0x18, 0x19) instead, and the Metronome's block category is 0x19.
+metronome_assign_cat:               @ in place of its call of BLOCK_CATEGORY at 0x28dd84d8
+    push {r1, r2, r4, lr}
+    ldr r4, =BLOCK_CATEGORY
+    blx r4
+    pop {r1, r2}
+    cmp r1, #PRESET_ID
+    itt eq
+    moveq r1, #VOLUME
+    strbeq r1, [r2]
+    pop {r4, pc}
+
+@ Its footswitch's LED would be white at every other call, preset load among them: the colour lookup has no colour for 0x19.
+metronome_led_colour:               @ owns the colour lookup (r0 block category, r1 on); r12 its stock code
+    cmp r0, #METRONOME
+    it eq
+    moveq r0, #VOLUME
+    bx r12
