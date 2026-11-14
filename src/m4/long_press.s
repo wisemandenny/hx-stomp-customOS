@@ -1,7 +1,8 @@
 @ long_press.s - long-press footswitch actions: in Stomp mode, a latching stomp footswitch 1..5 with a Hold action set acts on release
 @ when tapped (its press is held back and replayed on the click) and runs the action when held for 1 s: the tuner, a press of FS4/FS5,
 @ or a press of a virtual footswitch FS6..FS10, which runs its FS6..FS10 Function: as Stomp it toggles the blocks assigned to MIDI CC 20..24
-@ (Bypass Assign > MIDI In, where they read FS6..FS10 under the label FootswIn), and any other function runs in the stock dispatch's code, as footswitch 1..5's would.
+@ (Bypass Assign > MIDI In, where they read FS6..FS10 under the label FootswIn), GlobalEQ opens Global EQ, and any other function
+@ runs in the stock dispatch's code, as footswitch 1..5's would. In Global EQ, any footswitch press goes Home, as one leaves the tuner.
 @ tools/features/long_press.py owns the footswitch event handler 0x28dd1978 and enters lp_event with the stock handler in r2.
 .syntax unified
 .thumb
@@ -11,9 +12,12 @@
 .equ CLICK, 3                       @ a release before a hold, posted after the release
 .equ HOLD, 5
 .equ FS1_CODE, 12                   @ footswitches 1..5 are key codes 12..16
+.equ TOUCHES, 3                     @ codes 9..11 are touches on footswitches 1..3
+.equ TOUCHED, 0x7d                  @ the handler's object: footswitch k touched at +0x7d + k, which its touch hold needs
 .equ STOMP, 2                       @ the footswitch function that toggles blocks
 .equ TUNER, 0                       @ FS6..FS10 Function's value in TAP/Tunr's place; the others are function value + 1
 .equ TOGGLE_EXP, 12                 @ the function that switches EXP 1/2, then toggles its blocks
+.equ GLOBAL_EQ, 12                  @ FS6..FS10 Function's value after TogglEXP, HXtra's own
 .equ SWITCH, 0x28dd14e1             @ the dispatch 0x28dd14a0's tbh on the function - 1; tools/features/long_press.py's SWITCH
 .equ TOGGLE_EXP_BODY, 0x28dd17fd    @ its TogglEXP case past the press check; long_press.py's TOGGLE_EXP
 .equ PRESSED, 0x78                  @ the handler's object: footswitch k pressed at +0x78 + k
@@ -23,6 +27,14 @@
 .equ CONTROLLERS, 0x28d9608d        @ () -> the parameter controllers; +4 their lock, 64 nodes of 0x48 bytes from +0xac
 .equ MIDI_CC, 8                     @ the MIDI CC controller
 .equ LABEL, 0x28dc63d1              @ (knob, text): a knob's label
+.equ VIEW_IS, 0x28d96135            @ (view) -> 1 when it is the current view
+.equ REQUEST_VIEW, 0x28d96321       @ (view): the UI task switches to it; ignored while 0x2812b42c+0x95a or 0x2812a05c+0x5c is set
+.equ REQUEST_PANEL, 0x28d9638d      @ (panel): the view's panel
+.equ HOME_VIEW, 0                   @ gPlayViewID, with panel 1, as the Home key requests it
+.equ HOME_PANEL, 1
+.equ TUNER_VIEW, 5                  @ gTunerViewID
+.equ GLOBAL_EQ_VIEW, 6              @ gGlobalEQViewID, with panel 8, as Global Settings' Global EQ item requests it
+.equ GLOBAL_EQ_PANEL, 8
 
 .thumb_func
 lp_event:                           @ r0 event {1 key, code, -, -, type}, r1 the handler's object, r2 the stock handler
@@ -37,8 +49,12 @@ lp_event:                           @ r0 event {1 key, code, -, -, type}, r1 the
     ldrb r7, [r4, #1]
     subs r7, #FS1_CODE
     cmp r7, #SWITCHES
-    bhs pass
+    bhs touch
     adr.w r8, pending
+    ldr r0, [r4, #4]
+    bl global_eq_exit
+    cmp r0, #0
+    bne out
     ldr r0, [r4, #4]
     cmp r0, #PRESS
     beq press
@@ -51,6 +67,10 @@ lp_event:                           @ r0 event {1 key, code, -, -, type}, r1 the
     beq pass
     movs r0, #0
     strb.w r0, [r8, r7]
+    cmp r7, #TOUCHES                @ its touch hold, if it comes after this one, would ask "Assign block to FS?" in the Edit view
+    itt lo
+    addlo r1, r5, r7
+    strblo r0, [r1, #TOUCHED]
     mov r0, r7
     bl action_of
     cmp r0, #1
@@ -92,6 +112,21 @@ click:
     add.w r0, r7, #FS1_CODE
     bl replay
     b out
+touch:                              @ the touch hold of a footswitch held for an action or a Global EQ exit would ask "Assign block to FS?"
+    adds r7, #FS1_CODE - 9
+    cmp r7, #TOUCHES
+    bhs pass
+    ldr r0, [r4, #4]
+    cmp r0, #HOLD
+    bne pass
+    adr.w r8, pending
+    ldrb.w r0, [r8, r7]
+    cmp r0, #0
+    bne out
+    adr.w r8, exiting
+    ldrb.w r0, [r8, r7]
+    cmp r0, #0
+    bne out
 pass:
     mov r0, r4
     mov r1, r5
@@ -132,6 +167,8 @@ virtual_press:                      @ r0 virtual footswitch 0..4: its function, 
     bl hxtra_setting_get
     cmp r0, #TUNER
     beq vp_tuner
+    cmp r0, #GLOBAL_EQ
+    beq vp_global_eq
     adds r0, #1
     add.w r10, r5, r7
     movs r1, #0
@@ -162,10 +199,64 @@ vp_toggle:
     mov r0, r4
     bl toggle_cc
     b vp_out
+vp_global_eq:
+    bl open_global_eq
+    b vp_out
 vp_tuner:
     bl open_tuner
 vp_out:
     pop {r4, r9, r10, pc}
+
+open_global_eq:                     @ as Global Settings' Global EQ item does
+    push {r4, lr}
+    movs r0, #TUNER_VIEW
+    ldr r3, =VIEW_IS
+    blx r3
+    cbnz r0, open_global_eq_out     @ leaving the tuner by a view request would skip its own close
+    movs r0, #GLOBAL_EQ_VIEW
+    movs r4, #GLOBAL_EQ_PANEL
+    b request
+go_home:                            @ as the Home key does
+    push {r4, lr}
+    movs r0, #HOME_VIEW
+    movs r4, #HOME_PANEL
+request:
+    ldr r3, =REQUEST_VIEW
+    blx r3
+    mov r0, r4
+    ldr r3, =REQUEST_PANEL
+    blx r3
+open_global_eq_out:
+    pop {r4, pc}
+
+global_eq_exit:                     @ r0 event type, r7 footswitch 0..4 -> r0 1 when it took the event: a press in Global EQ goes Home,
+    push {r4, lr}                   @ and that footswitch's events up to its release go with it
+    adr.w r4, exiting
+    add r4, r7
+    ldrb r3, [r4]
+    cbz r3, exit_press
+    cmp r0, #RELEASE
+    bne exit_took
+    movs r3, #0
+    strb r3, [r4]
+    b exit_took
+exit_press:
+    cmp r0, #PRESS
+    bne exit_pass
+    movs r0, #GLOBAL_EQ_VIEW
+    ldr r3, =VIEW_IS
+    blx r3
+    cbz r0, exit_out
+    movs r3, #1
+    strb r3, [r4]
+    bl go_home
+exit_took:
+    movs r0, #1
+    b exit_out
+exit_pass:
+    movs r0, #0
+exit_out:
+    pop {r4, pc}
 
 open_tuner:                         @ as the stock hold of TAP does it
     push {r3, lr}
@@ -370,6 +461,8 @@ function_defaults:
 pending:                            @ per footswitch 0..4: its press was held back
     .space 8
 latched:                            @ per virtual footswitch 0..4: 1 when the last value sent turned its blocks on
+    .space 8
+exiting:                            @ per footswitch 0..4: its press left Global EQ
     .space 8
 
 HXTRA_SETTING_GET

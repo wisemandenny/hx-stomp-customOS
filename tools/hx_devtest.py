@@ -504,6 +504,124 @@ def t_long_press(u):
         u.home()
 
 
+def foot_hold(u, fs, seconds=1.5, look=None, settle=SETTLE):
+    """fs held as a foot holds it, its touch sensor with the press and both their holds after 1 s (hx_input.hold sends no touch);
+    look() runs just after the holds."""
+    i = u.input
+    i.send(hx_input.key(fs, hx_input.PRESS, 'touch'), hx_input.key(fs, hx_input.PRESS))
+    u.s.wait(hx_input.HOLD_S)
+    i.send(hx_input.key(fs, hx_input.HOLD, 'touch'), hx_input.key(fs, hx_input.HOLD))
+    if look:
+        look()
+    u.s.wait(max(0.0, seconds - hx_input.HOLD_S))
+    i.send(hx_input.key(fs, hx_input.RELEASE), hx_input.key(fs, hx_input.RELEASE, 'touch'))
+    u.s.wait(settle)
+
+
+def label_knob(u, label, steps=6):
+    """Pages a Global Settings section to the knob labelled label, matched on the label's last line so a value that reads the same
+    (FS1 Hold's FS6) is not it; returns the knob's number."""
+    want = re.compile(re.escape(norm(label)) + '$')
+    for direction in ('page_right', 'page_left'):
+        for _ in range(steps):
+            ln = u.find(want, (0, 186, 320, 54))
+            if ln:
+                return int(knob_under(ln.cx)[4])
+            u.press(direction)
+    raise Fail(f'no knob labelled {label!r}')
+
+
+def own_value(u, knob):
+    """Knob 1..3's value read from its own third of the screen, enlarged: Vision may read neighbouring values as one line."""
+    x0 = (knob - 1) * hm.W // 3
+    return u.zoom((x0, 150, hm.W // 3, 36))
+
+
+def step_to(u, knob, want, way, steps=16):
+    """Turns knob 1..3 a value at a time in direction way until it reads want: an int setting steps once every 4 counts, and a turn
+    of many counts in one event steps fewer times."""
+    for _ in range(steps):
+        if norm(own_value(u, knob)) == norm(want):
+            return
+        for _ in range(4):
+            u.turn(f'knob{knob}', way, settle=0)
+        u.s.wait(SETTLE)
+    raise Fail(f'knob {knob} did not reach {want!r}; it reads {own_value(u, knob)!r}')
+
+
+def until_home(u, timeout=3.0):
+    end = time.monotonic() + timeout
+    while not u.at_home():
+        if time.monotonic() > end:
+            raise Fail(f'not back on the Home screen; it shows {u.read()}')
+
+
+@case('global_eq', 'Long press GlobalEQ: a hold opens Global EQ with no "Assign block to FS?" and any footswitch press goes Home, '
+                   'toggling nothing; a touch alone still asks')
+def t_global_eq(u):
+    from features import long_press
+    holds = [v.decode() for v in long_press.VALUES]
+    u.home()
+    tap = u.find('tap', (0, 130, 320, 60))      # a hold of TAP opens the tuner, so the case holds another footswitch
+    fs = next(f'fs{k}' for k in (1, 2, 3) if not tap or k != int(tap.cx // (hm.W / 3)) + 1)
+    u.global_settings('Footswitches')
+    knob = label_knob(u, f'FS{fs[2]} Hold')
+    hold_was = u.dial(knob, 'FS6', holds)
+    fn = label_knob(u, 'FS6')
+    fn_was = own_value(u, fn)
+    try:
+        step_to(u, fn, 'GlobalEQ', 1)
+        for leave in ('fs1', 'fs2', 'fs3'):
+            u.home()
+            rings = u.leds()
+            foot_hold(u, fs)
+            u.see('global eq', what=f'Global EQ after a hold of {fs}')
+            u.press(leave, settle=0.6)
+            until_home(u)
+            if u.leds() != rings:
+                raise Fail(f'leaving Global EQ with {leave} changed the rings: {rings} -> {u.leds()}')
+        u.press('view', settle=0.6)
+        i = u.input
+        for _ in range(8):                      # the stock prompt is only for a block a footswitch can take: not Input or Output
+            i.send(hx_input.key(fs, hx_input.PRESS, 'touch'))
+            u.s.wait(hx_input.HOLD_S)
+            i.send(hx_input.key(fs, hx_input.HOLD, 'touch'))
+            try:
+                u.see('assign', timeout=1.5)
+                asked = True
+            except Fail:
+                asked = False
+            i.send(hx_input.key(fs, hx_input.RELEASE, 'touch'))
+            if asked:
+                break
+            u.turn('knob4', 1, settle=0.6)
+        else:
+            raise Skip(f'a touch alone on {fs} asks nothing on any block, so the Edit view check would prove nothing '
+                       '(Global EQ opened and every footswitch left it)')
+        u.gone('assign', timeout=8)
+        flashed = []
+
+        def look():                             # the prompt showed for a frame or two before Global EQ replaced it
+            for _ in range(3):
+                flashed.extend(filter(None, [u.find('assign')]))
+        foot_hold(u, fs, look=look)
+        if flashed:
+            raise Fail(f'a hold of {fs} in the Edit view showed {flashed[0].text!r}')
+        u.see('global eq', what=f'Global EQ after a hold of {fs} in the Edit view')
+        u.press(fs, settle=0.6)
+        until_home(u)
+    finally:
+        u.home()
+        u.global_settings('Footswitches')
+        u.dial(label_knob(u, f'FS{fs[2]} Hold'), hold_was, holds)
+        fn = label_knob(u, 'FS6')
+        if norm(fn_was) == norm(long_press.FUNCTIONS[0].values[1].decode()):
+            u.press(f'knob{fn}', settle=0.6)    # a knob press resets to the default, Stomp 6
+        else:
+            step_to(u, fn, fn_was, -1)
+        u.home()
+
+
 @case('more_snapshots', 'More snapshots: in Snapshot mode the lit footswitch again flips to snapshots 4..6 and back')
 def t_more_snapshots(u):
     u.home()

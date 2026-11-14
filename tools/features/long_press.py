@@ -1,6 +1,6 @@
 """Long press: in Stomp mode, holding a stomp footswitch 1..5 for 1 s opens the tuner, presses FS4/FS5 or presses a virtual
 footswitch FS6..FS10; a tap still toggles its blocks, on release (src/m4/long_press.s). FS6..FS10 Function give each virtual
-footswitch a stock footswitch function; as Stomp it toggles the blocks assigned to MIDI CC 20..24."""
+footswitch a stock footswitch function; as Stomp it toggles the blocks assigned to MIDI CC 20..24, and GlobalEQ opens Global EQ."""
 from features import Setting
 import patch_menu as pm
 
@@ -11,10 +11,10 @@ VIRTUAL_CC = 20                     # FS6..FS10 are MIDI CC 20..24 (undefined in
 # FS1..FS5 Hold default to FS6..FS10 (values 4..8): virtual settings read their default until first set.
 HOLDS = tuple(Setting(f'fs{n}', f'Function\nFS{n} Hold'.encode(), VALUES, default=n + 3) for n in (1, 2, 3, 4, 5))
 # FS3..FS5 Function's values with Tuner for TAP/Tunr, as a hold has no use for a tap; from Stomp on, value v is function v + 1 of the
-# stock dispatch 0x28dd14a0. Stomp, the default, toggles CC 20..24.
+# stock dispatch 0x28dd14a0. Stomp, the default, toggles CC 20..24. GlobalEQ comes last, so stored values keep their meaning.
 FUNCTIONS = tuple(Setting(f'fs{n}_function', f'Function\nFS{n}'.encode(),
                           (b'Tuner', f'Stomp {n}'.encode(), b'Bank Up', b'Bank Dn', b'PresetUp', b'PresetDn', b'SnpshtUp', b'SnpshtDn',
-                           b'FS Mode>', b'<FS Mode', b'AllBypas', b'TogglEXP'), default=1) for n in (6, 7, 8, 9, 10))
+                           b'FS Mode>', b'<FS Mode', b'AllBypas', b'TogglEXP', b'GlobalEQ'), default=1) for n in (6, 7, 8, 9, 10))
 SETTINGS = HOLDS + FUNCTIONS
 
 # The footswitch event handler (event, object): owned, as a held-back press means not running it for that event.
