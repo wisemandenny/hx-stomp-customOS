@@ -659,7 +659,83 @@ def t_metronome(u):
         u.reload(at)
 
 
-@case('nam', 'NAM A2 Lite: Amp > NAM > NAM A2 Lite adds the block; its Model knob reads a whole number')
+def teal(c):
+    """A ring colour (0xBBGGRR) is the Volume blocks' teal, lit or dim: green and blue well above red. White and grey are not."""
+    r, g, b = c & 0xff, c >> 8 & 0xff, c >> 16
+    return min(g, b) > 2 * r and max(g, b) >= 0x10
+
+
+def ring(u, k, timeout=3.0, want=None):
+    """FS k+1's ring (colour, mode), waiting up to timeout for one want(colour, mode) accepts."""
+    end = time.monotonic() + timeout
+    while True:
+        c, mode = u.leds()[k]
+        if want is None or want(c, mode) or time.monotonic() > end:
+            return c, mode
+        u.s.wait(0.1)
+
+
+@case('metronome_bypass', 'Metronome in Bypass Assign: MIDI In shows and moves off Off, the footswitch knob leaves None, and the '
+      'footswitch\'s ring is teal and toggles the block')
+def t_metronome_bypass(u):
+    at = u.preset()
+    try:
+        u.empty_slot()
+        u.press('knob5', settle=0.8)
+        u.browse('Looper', 'Metronome', 'Metronome')
+        u.see('metronome', (0, 115, 320, 30), what='the Metronome block in the Edit view')
+        u.both_pages()
+        u.see('menu', (0, 120, 160, 30), what='the Menu')
+        tiles = (0, 150, 320, 90)
+        for _ in range(3):
+            if u.find('bypass', tiles):
+                break
+            u.press('page_right')
+        ln = u.see('bypass', tiles, what='the Bypass Assign tile in the Menu')
+        u.press(knob_under(ln.cx), settle=0.6)
+        u.page_to('switch')                     # page 1 has Switch, page 2 MIDI In
+        none = u.see('none', (0, 150, 320, 36), what='the footswitch knob on None')
+        fk = int(knob_under(none.cx)[4])
+        fs = ''
+        for _ in range(6):                      # a count at a time: knob counts are finer than a value
+            u.turn(f'knob{fk}', 1, settle=0.3)
+            fs = norm(u.value(fk))
+            if fs != 'none':
+                break
+        m = re.fullmatch(r'fs([1-5])', re.sub(r'(?<=^fs)[tli|]$', '1', fs))     # Vision reads FS1 as FST
+        if not m:
+            raise Fail(f'the footswitch knob reads {fs!r}, not FS1..FS5')
+        midi_in = re.compile(r'midiin|footswin')
+        u.page_to(midi_in)
+        mk = int(knob_under(u.see(midi_in, (0, 185, 320, 55), what='Bypass Assign\'s MIDI In knob').cx)[4])
+        for _ in range(6):
+            u.turn(f'knob{mk}', 1, settle=0.3)
+            if norm(u.value(mk)) != 'off':
+                break
+        else:
+            raise Fail('MIDI In stays on Off')
+        u.home()
+        k = int(m.group(1)) - 1
+        if k > 2:
+            raise Skip(f'the Metronome took FS{k + 1}, which has no ring')
+        c, mode = ring(u, k, want=lambda c, mode: teal(c))
+        if not teal(c):
+            raise Fail(f'FS{k + 1}\'s ring is {c:06x} (0xBBGGRR), not teal')
+        u.press(f'fs{k + 1}', settle=0.6)
+        toggled = ring(u, k, want=lambda c2, m2: (c2, m2) != (c, mode))
+        if toggled == (c, mode):
+            raise Fail(f'FS{k + 1} did not toggle the Metronome: its ring stayed {c:06x}, mode {mode}')
+        u.press(f'fs{k + 1}', settle=0.6)
+        u.press('page_left', settle=0.6)        # Snapshot mode and back to Stomp: the rings are drawn again
+        u.press('page_right', settle=0.6)
+        c, _ = ring(u, k, want=lambda c, mode: teal(c))
+        if not teal(c):
+            raise Fail(f'after a footswitch mode round trip FS{k + 1}\'s ring is {c:06x}, not teal')
+    finally:
+        u.reload(at)
+
+
+@case('nam','NAM A2 Lite: Amp > NAM > NAM A2 Lite adds the block; its Model knob reads a whole number')
 def t_nam(u):
     at = u.preset()
     try:

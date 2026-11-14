@@ -28,6 +28,7 @@ The HX Stomp's footswitches, knobs and buttons pressed and turned from a compute
 - **Taps**: four TAP presses 0.5 s apart read 120 only when no frame is fetched between them (`hx_devtest.taps` holds the session's lock); with frames between, each request waits for one, and the taps read 97.
 - **Vision** reads the screen's fonts at confidence 1.0, but not a lone character (the NAM Model's "1", the snapshot number in the camera icon), it reads some capitals as Cyrillic and the edited marker as # or ®, and the browser's DSP share as a prefix ("00: Metronome").
 - **Tempo** on this unit is global: loading the preset again kept the tapped tempo.
+- **Bypass Assign** [verified on unit 2026-11-14, metronome-fixes-4]: a Menu tile, for the Edit view's selected block. Page 1 has Switch (None, FS1..) under knob 1, page 2 MIDI In (Off, then CCs; FS6.. with long press) under knob 1 and Customize under knob 3. Vision reads the value FS1 as "FST".
 
 ## On the unit [verified on unit 2026-11-13, usb-button-inputs-1, MD5 e3bf2692…]
 
