@@ -420,8 +420,8 @@ def test_comp_patch_refuses_a_second_run(comp_patched):
 # ---- the whole GR build, pinned as tests/test_firmware.py pins the default one
 
 GR_BUILT_MD5 = {
-    'HX_GR': 'f0a484217c5b15671fe5002d16b899d1',
-    'HX_GR HX_CLICK': 'b6e9a5ec9d843d90e7e5bbf9d33d06f5',    # patch_click.py adds a model, which would drop knobs written before it
+    'HX_GR': '4dc65712867ca6663160bc755bb26a47',
+    'HX_GR HX_CLICK': '97c3f7390c241acb3972b4d0ef7d733d',    # patch_click.py adds a model, which would drop knobs written before it
 }
 
 
@@ -495,7 +495,7 @@ def test_without_gr_nam_keeps_three_slots(tmp_path, monkeypatch):
 # ---- the feature: its hooks on the stock firmware
 
 @pytest.mark.firmware
-def test_gr_feature_chains_its_three_hooks():
+def test_gr_feature_chains_its_five_hooks():
     import features.gr as gr
     e0 = pa.get_entry_swapped(stock_l6ia(), 0)
     mods = features.load()
@@ -509,7 +509,8 @@ def test_gr_feature_chains_its_three_hooks():
         o = pa._e0_vaddr_to_foff(s, va, 4)
         return struct.unpack('<I', e[o:o + 4])[0]
 
-    for lit, stock in ((gr.RX_CB_LIT, gr.RX_CB), (gr.HOME_PAINT_LIT, gr.HOME_PAINT)):
+    for lit, stock in ((gr.RX_CB_LIT, gr.RX_CB), (gr.HOME_PAINT_LIT, gr.HOME_PAINT), (gr.EDIT_PAINT_LIT, gr.EDIT_PAINT),
+                       (gr.VIEW_PAINT_LIT, gr.VIEW_PAINT)):
         assert u32(plain, psegs, lit) == stock
         stub = u32(new, segs, lit)
         assert stub != stock and stub & 1
@@ -517,9 +518,24 @@ def test_gr_feature_chains_its_three_hooks():
     assert new[o:o + 4] != pm.bl(gr.HOME_CTOR_CALL, gr.HOME_CTOR)
 
 
+@pytest.mark.firmware
+def test_comp_names_are_the_models_in_the_model_table():
+    """The names the Edit view looks for are the stock Entry 3's, and each is a model the cost table prices by it."""
+    import features.gr as gr
+    names = gr.comp_names(pa.get_entry_swapped(stock_l6ia(), 3))
+    assert tuple(names) == COMP_NAMES
+    e0 = pa.get_entry_swapped(stock_l6ia(), 0)
+    segs = pa._parse_e0_segments(e0)
+    base = struct.unpack_from('<I', e0, pa._e0_vaddr_to_foff(segs, 0x28e01c08, 4))[0]     # the Static Model Table
+    o = pa._e0_vaddr_to_foff(segs, base, 12 * 823)
+    keys = {struct.unpack_from('<I', e0, o + 12 * i)[0] for i in range(823)}
+    assert set(names) <= keys
+
+
 # ---- the M4 meter, in unicorn
 
 MODULE, FRAME_VA = 0x28e60000, 0x28e80000                # where the module and a frame sit in the emulator's SDRAM
+COMP_NAMES = (671, 2699, 656, 2700, 1317, 2985, 1981, 3085, 1508, 3010, 669, 2701)     # gr.comp_names() of the stock Entry 3
 SET_COLOR, SET_POS, SET_SIZE, GET_VALUE, REDRAW = 0x28e24b98, 0x28e24af0, 0x28e24b28, 0x28e1f844, 0x28db8508
 LOCK, UNLOCK = 0x28e24970, 0x28e24ae8
 SETTERS = (SET_COLOR, SET_POS, SET_SIZE)
@@ -540,7 +556,8 @@ class Meter:
     """gr_meter.s in tests/m4emu.py: the stock widget setters write the widget as the firmware's do."""
 
     def __init__(self, m4emu):
-        code, self.sym = m4emu.assemble('src/m4/gr_meter.s', [], {})
+        import features.gr as gr
+        code, self.sym = m4emu.assemble('src/m4/gr_meter.s', [], {}, inc=gr.inc(COMP_NAMES))
         m = self.m = m4emu.M4(code, MODULE)
         m.stub(SET_COLOR, lambda m: m.u32(m.reg('r0'), m.reg('r1')))
         m.stub(SET_POS, lambda m: m.write(m.reg('r0') + 4, struct.pack('<2I', m.reg('r1'), m.reg('r2'))))
@@ -722,3 +739,225 @@ def test_m4_handlers_through_the_chain_stubs(m4emu):
     order = [at for at, _ in m.log if at in (erase, draw, gr.HOME_PAINT & ~1)]
     assert order == [erase] * 46 + [gr.HOME_PAINT & ~1] + [draw] * 46
     assert m.calls(gr.HOME_PAINT) == [(0x1234, home, 5, 6)]
+
+
+# ---- the Edit view's lights, straight into the framebuffer
+
+FB = 0x28a00000                                         # a framebuffer: 320 columns of 240 pixels, bottom-up
+LIST_A, LIST_B = 0x281f35b8, 0x281f3d2c
+EDIT_A, EDIT_B, BROWSER = 0x28128270, 0x281282f8, 0x281299d0
+NODES, DSP, BLOCKS, SELECTED = 0x28b00000, 0x28b10000, 0x28b20000, 0x28df0280
+DSP_LOCK, DSP_UNLOCK = 0x28e07844, 0x28e0785c
+
+
+def rgb565(c):
+    return (c >> 3 & 31) << 11 | (c >> 10 & 63) << 5 | (c >> 19 & 31)
+
+
+def rects(pos, t):
+    """Each slot's (x, bottom row, w, h), as layout places the Home widgets."""
+    out = []
+    for j in range(10):
+        if pos == 0:
+            out.append((32 * j, 0x76 + (t + 1) // 2 - t, 30, t))
+        elif pos in (1, 3):
+            out.append((32 * j, 240 - t if pos == 1 else 0, 30, t))
+        else:
+            out.append((0 if pos == 2 else 320 - t, 216 - 24 * j, t, 21))
+    return out
+
+
+class Edit(Meter):
+    """The meter with an Edit view on screen: list A shows its bottom half, list B its top half, and block record 2 (ID 3) is selected."""
+
+    def __init__(self, m4emu):
+        super().__init__(m4emu)
+        m = self.m
+        self.id, self.name = 3, COMP_NAMES[0]
+        m.stub(SELECTED, lambda m: m.reg('r0', self.id))
+        m.stub(DSP_LOCK)
+        m.stub(DSP_UNLOCK)
+        self.views(EDIT_A, EDIT_B)
+        m.u32(0x28449e78, DSP)
+        m.u32(DSP + 0x4400, BLOCKS)
+        self.pattern = bytes((x * 7 + y * 3) & 0xff for x in range(320) for y in range(480))
+        m.write(FB, self.pattern)
+
+    def views(self, a, b):
+        """List A's first active node paints a, list B's b; an inactive node goes first in each."""
+        for k, (head, view) in enumerate(((LIST_A, a), (LIST_B, b))):
+            node, off = NODES + 0x40 * 2 * k, NODES + 0x40 * (2 * k + 1)
+            self.m.write(off, struct.pack('<6I', 0, 0x1234, 0, 0x99, 0, node))
+            self.m.write(node, struct.pack('<6I', 1, 0x1235, 0, view, 0, 0))
+            self.m.u32(head, off)
+
+    def block(self, record, name, handle=7):
+        self.m.u32(DSP + 0x14 + 0x54 * record, handle)
+        obj = 0x28b30000 + 0x100 * record
+        self.m.u32(BLOCKS + 0x24 + 4 * handle, obj)
+        self.m.write(obj + 5, b'\x01')
+        self.m.u32(obj + 0x54, name)
+
+    def paint(self, half=EDIT_B):
+        rows = {i: i - 1 for i in range(1, 9)} | {i: i - 3 for i in range(11, 19)}
+        self.block(rows.get(self.id, 2), self.name)         # a compressor in record 2 for an ID that is no block
+        self.m.log.clear()
+        self.call('edit_top' if half == EDIT_B else 'edit_params', FB, half)
+
+    def px(self, x, y):
+        return struct.unpack('<H', self.m.read(FB + 2 * (240 * x + y), 2))[0]
+
+    def stock(self, x, y):
+        return struct.unpack_from('<H', self.pattern, 2 * (240 * x + y))[0]
+
+    def screen(self):
+        return self.m.read(FB, 320 * 480)
+
+
+def lights(e, pos, t, n, dir_=0):
+    """n Edit-view lights are lit, each in its colour over every pixel of its rectangle; the unlit ones leave the screen as it was."""
+    for j, (x, y, w, h) in enumerate(rects(pos, t)):
+        i = 9 - j if dir_ else j
+        got = [e.px(x + dx, y + dy) for dx in range(w) for dy in range(h)]
+        want = [rgb565(e.word('colours', i))] * (w * h) if i < n else [e.stock(x + dx, y + dy) for dx in range(w) for dy in range(h)]
+        assert got == want, (j, x, y)
+
+
+@pytest.mark.parametrize('pos', range(5))
+def test_edit_lights_follow_mtr_pos(m4emu, pos):
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-4.5 / 20), window=1, pos=pos, thk=3)
+    e.paint()
+    lights(e, pos, 15, 4)
+    inside = {(x + dx, y + dy) for x, y, w, h in rects(pos, 15) for dx in range(w) for dy in range(h)}
+    assert all(e.px(x, y) == e.stock(x, y) for x in range(0, 320, 3) for y in range(0, 240, 3) if (x, y) not in inside)
+
+
+def test_edit_lights_follow_mtr_dir_and_size(m4emu):
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-4.5 / 20), window=1, pos=2, dir_=1, thk=4)
+    e.paint()
+    lights(e, 2, 20, 4, dir_=1)
+
+
+def test_edit_lights_go_and_leave_the_screen_as_it_was(m4emu):
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint()
+    assert e.screen() != e.pattern
+    e.frame(1.0, 10 ** (-12 / 20), window=2, pos=1, thk=0)          # Mtr Size Off
+    e.paint()
+    assert e.screen() == e.pattern
+
+
+def test_edit_lights_keep_what_a_stock_paint_drew_under_them(m4emu):
+    """A knob value redrawn under a lit light shows when the light dims, and the dimmed light leaves the text alone after that."""
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=3, thk=4)
+    e.paint()
+    x, y = rects(3, 20)[2][:2]
+    e.m.write(FB + 2 * (240 * x + y), b'\x34\x12')                   # a stock paint draws over light 3
+    e.m.write(FB + 2 * (240 * (x + 1) + y), b'\x00\x00')             # and a stock erase leaves black
+    e.paint()
+    lights(e, 3, 20, 7)
+    e.frame(1.0, 10 ** (-1.5 / 20), window=2, pos=3, thk=4)         # fewer lights lit
+    e.paint()
+    assert e.px(x, y) == 0x1234 and e.px(x + 1, y) == 0 and e.px(x + 2, y) == e.stock(x + 2, y)
+    e.m.write(FB + 2 * (240 * (x + 3) + y), b'\x78\x56')             # text redrawn under the unlit light
+    e.paint()
+    assert e.px(x + 3, y) == 0x5678
+
+
+def test_edit_lights_leave_what_a_stock_paint_drew_since(m4emu):
+    """The paint that selects another block may draw under a lit light before the lights go: those pixels stay."""
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint()
+    x, y = rects(1, 20)[0][:2]
+    e.m.write(FB + 2 * (240 * x + y), b'\xbc\x9a')
+    e.id, e.name = 5, 1234
+    e.paint()
+    assert e.px(x, y) == 0x9abc and e.px(x + 1, y) == e.stock(x + 1, y)
+
+
+def test_edit_unlit_lights_never_touch_the_screen(m4emu):
+    """Text under an unlit light is never covered, though it changes while the meter shows."""
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint()
+    e.frame(1.0, 10 ** (-1.5 / 20), window=2, pos=1, thk=4)        # one light lit: light 6 has saved pixels to give back
+    e.paint()
+    x, y, w, h = rects(1, 20)[5]
+    text = struct.pack(f'<{h}H', *[0 if k % 2 else 0x4321 for k in range(h)])    # black between strokes
+    e.m.write(FB + 2 * (240 * x + y), text)
+    e.paint()
+    assert e.m.read(FB + 2 * (240 * x + y), 2 * h) == text
+
+
+def test_edit_lights_move_with_mtr_pos(m4emu):
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint()
+    e.frame(1.0, 10 ** (-12 / 20), window=2, pos=4, thk=4)
+    e.paint()
+    lights(e, 4, 20, 7)
+    for x, y, w, h in rects(1, 20):
+        assert all(e.px(x + dx, y + dy) == e.stock(x + dx, y + dy) for dx in range(w) for dy in range(h) if x + dx < 300)
+
+
+@pytest.mark.parametrize('block_id, record', [(1, 0), (8, 7), (11, 8), (18, 15)])
+def test_edit_lights_for_a_compressor_on_either_row(m4emu, block_id, record):
+    e = Edit(m4emu)
+    e.id, e.name = block_id, COMP_NAMES[-1]
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint()
+    lights(e, 1, 20, 7)
+    assert e.m.calls(DSP_LOCK) and len(e.m.calls(DSP_LOCK)) == len(e.m.calls(DSP_UNLOCK))
+
+
+@pytest.mark.parametrize('block_id, name', [(3, 1234), (0, COMP_NAMES[0]), (9, COMP_NAMES[0]), (10, COMP_NAMES[0]),
+                                            (19, COMP_NAMES[0])])
+def test_edit_no_lights_for_another_block(m4emu, block_id, name):
+    # IDs 0, 9, 10 and 19 are the input, output, split and merge: no block record
+    e = Edit(m4emu)
+    e.id, e.name = block_id, name
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint()
+    assert e.screen() == e.pattern
+
+
+@pytest.mark.parametrize('a, b', [(EDIT_A, BROWSER), (0x2812a05c, 0x2812aae0)])
+def test_edit_no_lights_unless_both_halves_are_the_edit_view(m4emu, a, b):
+    e = Edit(m4emu)
+    e.views(a, b)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.paint(EDIT_A)
+    assert e.screen() == e.pattern
+
+
+def test_edit_params_skips_every_other_view(m4emu):
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.m.log.clear()
+    e.call('edit_params', FB, 0x2812a05c)
+    assert e.screen() == e.pattern and not e.m.log
+    e.paint(EDIT_A)
+    lights(e, 1, 20, 7)
+
+
+def test_edit_handlers_through_the_chain_stubs(m4emu):
+    """The stock paints still run once with their arguments, and the lights go on after them."""
+    import features.gr as gr
+    e = Edit(m4emu)
+    e.frame(1.0, 10 ** (-12 / 20), window=1, pos=1, thk=4)
+    e.block(2, COMP_NAMES[0])
+    m, cave = e.m, 0x28e70000
+    for k, (stock, sym, view) in enumerate(((gr.EDIT_PAINT, 'edit_top', EDIT_B), (gr.VIEW_PAINT, 'edit_params', EDIT_A))):
+        m.stub(stock)
+        at = cave + 0x100 * k
+        m.load(at, pm.chain_cave(at, stock & ~1, [], [MODULE + e.sym[sym]]))
+        m.write(FB, e.pattern)
+        m.log.clear()
+        m.call(at, FB, view, 5, 6)
+        assert m.calls(stock) == [(FB, view, 5, 6)]
+        lights(e, 1, 20, 7)

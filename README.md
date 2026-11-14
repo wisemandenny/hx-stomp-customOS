@@ -138,8 +138,10 @@ The setup page builds HXtra locally from your own firmware file, right in your b
 *New settings on all compressors except 3-Band Compressor*
 
 - **Mtr Size** (Off, S, M, L, XL): the meter's thickness. Each size is an additional 5px; off disables the meter.
-- **Mtr Pos** (Middle, Top, Left, Bottom, Right): Location of the meter on the Home screen. Middle takes the place of the line across the middle, and disables breathing line.
+- **Mtr Pos** (Middle, Top, Left, Bottom, Right): Location of the meter on the Home screen and on the compressor's edit screen. Middle takes the place of the line across the middle, and disables breathing line.
 - **Mtr Dir** (Normal, Reverse): Normal fills left to right or top to bottom; Reverse the other way. Useful for Left/Right position settings.
+
+The meter also shows while you edit the compressor, so you can dial in Threshold, Ratio, Attack and Release while you play.
 
 <!-- demo: gr-meter -->
 <details>

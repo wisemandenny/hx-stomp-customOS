@@ -7,10 +7,13 @@
 @ The lights are A over B in dB, from 64-block window peaks (for the Deluxe Comp, A is 1 / the core's own gain), at 1 2 3 4 6 8 10 14
 @ 19 25 dB. The measured gain already follows the comp's attack and release; in silence the lights decay at its Release.
 @ Handlers on shared hooks (tools/features/gr.py): frame before the DSP stream's receive callback, construct after the Home view's
-@ constructor, erase before and draw after its paint function. Position independent, assembled by tools/m4asm.py at build time.
+@ constructor, erase before and draw after its paint function, and edit_top and edit_params after the Edit view's two paints, which
+@ draw the same lights straight into the framebuffer while the selected block is a compressor the meter measures (gr.inc).
+@ Position independent, assembled by tools/m4asm.py at build time.
 @ Integer maths only: the thread has no FPU context of its own.
 .syntax unified
 .thumb
+.include "gr.inc"
 .thumb_func
 frame:                              @ r1 the frame
     push {r0-r7, lr}
@@ -530,18 +533,269 @@ lg:                                 @ r0 a frame word -> r0 log2 of its magnitud
     add.w r0, r0, r3, lsr #16
     bx lr
 
+.thumb_func
+edit_params:                        @ r0 the framebuffer, r1 the view, after the generic paint of list A's views
+    ldr r2, =0x28128270             @ the Edit view's bottom half
+    cmp r1, r2
+    beq edit
+    bx lr
+.thumb_func
+edit_top:                           @ r0 the framebuffer, r1 the Edit view's top half, after its stock paint
+edit:                               @ list B paints after list A into the same buffer, so whichever ran last leaves the lights on top
+    push {r4-r6, r10, r11, lr}
+    mov r11, r0
+    adr.w r10, data
+    ldr r4, [r10, #40]              @ the layout the frame last set
+    cmp r4, #0
+    beq ewant
+    bl showing
+    cbz r0, ehide
+    bl selected
+    cbnz r0, ewant
+ehide:
+    movs r4, #0
+ewant:
+    ldr r5, [r10, #48]              @ the layout drawn, 0 for none
+    cbz r5, drawn
+    eor.w r0, r4, r5
+    ldr r1, =0x7f00ff00             @ Position and Thickness: the rectangles
+    tst r0, r1
+    beq drawn
+    mov r0, r5
+    movs r1, #0
+    bl slots
+    movs r5, #0
+    str r5, [r10, #48]
+drawn:
+    cbz r4, edone
+    mov r0, r4
+    movs r1, #1
+    bl slots
+    str r4, [r10, #48]
+edone:
+    pop {r4-r6, r10, r11, pc}
+
+slots:                              @ r0 a layout, r1 0 to take every light off, 1 to draw it; r11 the framebuffer
+    push {r4-r9, lr}
+    sub sp, #12
+    mov r7, r0
+    mov r8, r1
+    movs r9, #0                     @ slot j, counting left to right or top to bottom
+eslot:
+    ubfx r0, r7, #8, #8             @ Position, as layout places it
+    ubfx r1, r7, #24, #7            @ Thickness
+    cbz r0, emid
+    subs r0, #1
+    lsls r2, r0, #31
+    bne eupright
+    lsl.w r4, r9, #5                @ x
+    movs r6, #30                    @ w
+    mov r5, r1                      @ h
+    cmp r0, #0
+    ite eq
+    rsbeq.w r3, r1, #240            @ Top's bottom row; Bottom's is 0
+    movne r3, #0
+    b erect
+eupright:
+    movs r2, #24
+    mul r3, r9, r2
+    rsb.w r3, r3, #216
+    mov r6, r1
+    movs r5, #21
+    cmp r0, #1
+    ite eq
+    moveq r4, #0
+    rsbne.w r4, r1, #320
+    b erect
+emid:
+    lsl.w r4, r9, #5
+    movs r6, #30
+    mov r5, r1
+    adds r3, r1, #1
+    lsrs r3, r3, #1
+    adds r3, #0x76
+    subs r3, r3, r1
+erect:                              @ x r4, bottom row r3, w r6, h r5
+    str r3, [sp, #0]
+    mov r0, r9
+    ubfx r2, r7, #16, #8
+    cbz r2, eforward
+    rsb.w r0, r9, #9
+eforward:
+    movs r1, #0                     @ an unlit light draws nothing: the text under it shows whole
+    uxtb r2, r7
+    cmp r0, r2
+    bhs ecolour
+    adr.w r3, colours               @ 0xRRGGBB to the screen's 5-6-5, blue high and red low
+    ldr.w r3, [r3, r0, lsl #2]
+    ubfx r1, r3, #3, #5
+    lsls r1, r1, #11
+    ubfx r2, r3, #10, #6
+    orr.w r1, r1, r2, lsl #5
+    ubfx r2, r3, #19, #5
+    orrs r1, r2
+ecolour:
+    cmp r8, #0
+    it eq
+    moveq r1, #0
+    str r1, [sp, #4]
+    adr.w r0, eprev
+    add.w r0, r0, r9, lsl #1
+    ldrh r2, [r0]                   @ the colour this slot is drawn in, 0 for none
+    strh r1, [r0]
+    str r2, [sp, #8]
+    orrs r1, r2
+    beq eslotdone
+    adr.w r12, esave                @ this slot's saved pixels: 600 for a 30 x 20 light at most
+    mov.w r0, #1200
+    mla r12, r9, r0, r12
+ecol:                               @ the framebuffer is column-major and bottom-up: pixel (x, y) at fb + 2 * (240 x + y)
+    ldr r3, [sp, #0]
+    movs r0, #240
+    mla r0, r4, r0, r3
+    add.w r0, r11, r0, lsl #1
+    mov lr, r5
+epix:
+    ldrh r1, [r0]
+    ldr r2, [sp, #8]
+    ldr r3, [sp, #4]
+    cbnz r3, epaint
+    cmp r1, r2                      @ restore only what is still ours: a stock paint may have drawn here since
+    itt eq
+    ldrheq r1, [r12]
+    strheq r1, [r0]
+    b enext
+epaint:
+    cbz r2, ekeep                   @ newly lit: save every pixel it covers
+    cmp r1, r2
+    beq ecover                      @ else only those a stock paint drew since
+ekeep:
+    strh r1, [r12]
+ecover:
+    strh r3, [r0]
+enext:
+    adds r0, #2
+    add.w r12, r12, #2
+    subs.w lr, lr, #1
+    bne epix
+    adds r4, #1
+    subs r6, #1
+    bne ecol
+eslotdone:
+    add.w r9, r9, #1
+    cmp.w r9, #10
+    bne eslot
+    add sp, #12
+    pop {r4-r9, pc}
+
+showing:                            @ -> r0 nonzero while list A paints the Edit view and list B its top half, as the UI loop picks them
+    push {r4, lr}
+    ldr r0, =0x281f35b8             @ list A's head
+    bl painted
+    ldr r1, =0x28128270
+    subs r4, r0, r1
+    ldr r0, =0x281f3d2c             @ list B's head
+    bl painted
+    ldr r1, =0x281282f8
+    subs r0, r0, r1
+    orrs r0, r4
+    ite eq
+    moveq r0, #1
+    movne r0, #0
+    pop {r4, pc}
+painted:                            @ r0 a view list's head -> r0 the view of its first active node, 0 for none or no paint
+    ldr r0, [r0]
+pnode:
+    cbz r0, pdone
+    ldr r1, [r0, #0]
+    lsls r1, r1, #31
+    bmi pactive
+    ldr r0, [r0, #0x14]
+    b pnode
+pactive:
+    ldr r1, [r0, #4]
+    cmp r1, #0
+    ite ne
+    ldrne r0, [r0, #0xc]
+    moveq r0, #0
+pdone:
+    bx lr
+
+selected:                           @ -> r0 nonzero when the selected block is one of the compressors in gr.inc
+    push {r4-r6, lr}
+    sub sp, #8
+    add r0, sp, #4
+    ldr r3, =0x28df0281             @ the selected block's ID, as the Edit view's layout reads it; takes its own lock
+    blx r3
+    subs r4, r0, #1                 @ IDs 1..8 are block records 0..7, IDs 11..18 records 8..15, the second row (0x28e07328)
+    cmp r4, #8
+    blo eblock
+    subs r4, r0, #3
+    subs r0, r4, #8
+    cmp r0, #8
+    bhs enone
+eblock:
+    ldr r5, =0x28449e78             @ the DSP model: block records of 0x54 bytes
+    ldr r5, [r5]
+    cbz r5, enone
+    movs r0, #0
+    ldr r3, =0x28e07845             @ its lock, as dsp_meter.s takes it
+    blx r3
+    movs r6, #0
+    movs r2, #0x54
+    mla r0, r4, r2, r5
+    ldr r0, [r0, #0x14]             @ the block's handle among the preset's nodes
+    cmp r0, #0x4b
+    bhi eunlock
+    add.w r1, r5, #0x4400
+    ldr r1, [r1]
+    add.w r1, r1, r0, lsl #2
+    ldr r1, [r1, #0x24]
+    cbz r1, eunlock
+    ldrb r2, [r1, #5]
+    cmp r2, #1
+    bne eunlock                     @ kind 1: a block object
+    ldr r6, [r1, #0x54]             @ its model's name, an Entry 3 string index
+eunlock:
+    movs r0, #0
+    ldr r3, =0x28e0785d
+    blx r3
+    adr.w r1, comps
+    movs r2, #COMP_COUNT
+ecomp:
+    ldrh r0, [r1], #2
+    cmp r0, r6
+    beq eyes
+    subs r2, #1
+    bne ecomp
+enone:
+    movs r0, #0
+    b eout
+eyes:
+    movs r0, #1
+eout:
+    add sp, #8
+    pop {r4-r6, pc}
+
 .ltorg
 .balign 4
 lights:                             @ a compressor pedal's GR lights, 1 2 3 4 6 8 10 14 19 25 dB, in 1/256 octaves
     .hword 43, 85, 128, 170, 255, 340, 425, 595, 808, 1063
 colours:                            @ lights 1..10
     .word 0x00ff00, 0x66ff00, 0xb3ff00, 0xffff00, 0xffd000, 0xffa500, 0xff7f00, 0xff5500, 0xff2a00, 0xff0000
+comps:                              @ the compressor models' names, from gr.inc
+    COMP_NAMES
+.balign 4
 data:                               @ 0 shown reduction (Q16), 4 frames since the compressor, 8 marker, 12 latch, 16 repaint,
-    .space 48                       @ 20 ours shown, 24 the last window seen, 28 frames, 32 the block's knobs (word 218), 36 relayout at frame, 40 layout,
-                                    @ 44 the selected divider segment
+    .space 52                       @ 20 ours shown, 24 the last window seen, 28 frames, 32 the block's knobs (word 218), 36 relayout at frame, 40 layout,
+                                    @ 44 the selected divider segment, 48 the layout the Edit view shows
 want:                               @ colour, x, y, w, h
     .space 20
 widgets:                            @ ten slots for each edge, Top, Left, Bottom, Right, then Middle's slots 4..9
     .space 46 * 0x1c
 nodes:                              @ their backing nodes
     .space 46 * 0x28
+eprev:                              @ the colour each Edit-view light was drawn in
+    .space 20
+esave:                              @ the pixels under each Edit-view light
+    .space 10 * 1200
