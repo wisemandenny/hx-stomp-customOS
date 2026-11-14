@@ -13,7 +13,7 @@ Everything HXtra adds to the HX Stomp, where to find it, and every setting. The 
 | [Long press](#long-press) | FS1–FS5 in Stomp footswitch mode · Global Settings > Footswitches, pages 2 to 5 | `HX_LONG_PRESS=1` |
 | [More snapshots](#more-snapshots) | The snapshot footswitches, with Footswitch Mode on Snapshot · no settings | `HX_MORE_SNAPSHOTS=1` |
 | [Metronome](#metronome) | Model browser: Looper > Metronome > Metronome · the block's knobs | `HX_CLICK=1` |
-| [GR meter](#gr-meter) | Home screen, lit by a compressor · knobs on six compressors | `HX_GR=1` |
+| [GR meter](#gr-meter) | Home screen and the compressor's Edit view, lit by a compressor · knobs on six compressors | `HX_GR=1` |
 | [Boot screen](#boot-screen-hx-stomp-only) | The screen at power-on · set when you build | `--splash`, `--splash-text` |
 | [NAM A2 Lite](#nam-a2-lite) | Model browser: Amp > NAM | always on |
 
@@ -163,15 +163,16 @@ A click track in time with the tempo, as a block: add it from the model browser,
 <!-- demo: gr-meter -->
 https://github.com/user-attachments/assets/50b5cd91-f578-4252-a1df-4b73d8ca1995
 
-A gain-reduction meter on the Home screen, lit by the compressor you turn it on in, so you can see how hard it is working. HX Stomp only.
+A gain-reduction meter on the Home screen and in the compressor's Edit view, lit by the compressor you turn it on in, so you can see how hard it is working. HX Stomp only.
 
 | Knob | Values | What it does |
 |---|---|---|
 | **Mtr Size** | Off, S, M, L, XL (default **Off**) | The meter's thickness: 5, 10, 15 or 20 pixels. A preset saved with an older build's Mtr Thk opens at S for 1 px, M for 2, L for 3 and XL for 4 or more. |
-| **Mtr Pos** | **Middle** (default), Top, Left, Bottom, Right | Where on the Home screen the meter lights up. Middle takes the place of the line across the middle. |
+| **Mtr Pos** | **Middle** (default), Top, Left, Bottom, Right | Where on the Home screen and the Edit view the meter lights up. Middle takes the place of the line across the middle. |
 | **Mtr Dir** | **Normal** (default), Reverse | Normal fills left to right or top to bottom; Reverse the other way. |
 
 - **Which compressors:** Deluxe, LA Studio, Kinky, Ampeg Opto, Rochester and Red Squeeze.
+- **Edit view:** while one of these compressors is selected, the meter shows in its Edit view too, in the same place and size, so you can set the compressor up while you play. Its lit lights cover what is under them (the preset name at Top, the knob names at Bottom); unlit ones leave it showing. With two metered compressors in a preset, both Edit views show the one whose Mtr Size was set last.
 - **With NAM:** in a build with the GR meter, NAM A2 Lite runs up to two blocks instead of three.
 
 ## Boot screen (HX Stomp only)
