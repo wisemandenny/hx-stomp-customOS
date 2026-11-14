@@ -75,6 +75,7 @@ Status:
 - *Settings limits for a new range: moved to [m4/settings.md](../m4/settings.md).*
 - **State-word copy** (from the state-map images): the DSP copies 16 words at `I0` and 16 at `I3` (as the core was called) after the stock code into frame words 218..249. Meter Source (now limits 0..60) = Map 0-9 / 10-19 / 20-29 / 30-31 shows each state word as a light, lit while it changes (held 64 frames); Word 0..31 shows one word as a bar in the Mode's scale (Level, Reduction, or Wide = 2^-20..2^20). The GR window is now 64 blocks (about 21 ms).
 - If it still freezes: (a) boot with a preset that has no compressor to separate DSP-side from M4-side causes; (b) build a variant whose M4 hook is a no-op; (c) suspect stack depth in the DSP-link thread (9 registers pushed + 12 bytes + `GET_VALUE` + setter) and setters called from a non-UI thread.
+- **Mtr Size** image (`hxbuild`, `HX_GR=1`, boot text gr-mtr-size-1, MD5 `914aefb00735eac3cad0c8516692ceac`, 2026-11-13): Mtr Thk renamed Mtr Size, its values Off, S, M, L, XL, the M4 drawing the step × 5 px. Result **[verified on unit]**: the label and values display and the meter's sizes follow the knob. A preset saved with the old Mtr Thk above 4 was not tried.
 
 ## Not yet done (when the user asks to commit the feature)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""patch_comp.py - the gain-reduction meter's knobs (Mtr Pos, Mtr Dir, Mtr Thk) on compressor blocks, HX Stomp or XL 3.80.0.
+"""patch_comp.py - the gain-reduction meter's knobs (Mtr Pos, Mtr Dir, Mtr Size) on compressor blocks, HX Stomp or XL 3.80.0.
 
 Each model in COMP_MODELS gets three more parameters after its own, in the three places that must agree:
   Entry 3: the parameter records, their state records and the strings they name (the string section grows in place).
@@ -35,7 +35,7 @@ COMP_MODELS = (   # (model, its compressor core's primitive: one of WRAPS)
 GR_KNOBS = (   # (name, displayName, displayNameShort, value labels, default): integer lists, as Ratio
     ('GRPosition', 'Mtr Position', 'Mtr Pos', ('Middle', 'Top', 'Left', 'Bottom', 'Right'), 0),
     ('GRDirection', 'Mtr Direction', 'Mtr Dir', ('Normal', 'Reverse'), 0),
-    ('GRThickness', 'Mtr Thickness', 'Mtr Thk', tuple(str(k) for k in range(21)), 0),    # 0 is off: the meter is opt-in
+    ('GRThickness', 'Mtr Size', 'Mtr Size', ('Off', 'S', 'M', 'L', 'XL'), 0),    # gr_meter.s draws 5 px a step; Off: the meter is opt-in
 )
 INT_INPUT_OP = 0x0b
 GR_PID = 100                    # src/sharc/frame_probe.asm's GR_PID: past every core's own pids (the LA Studio Comp's go to 14)

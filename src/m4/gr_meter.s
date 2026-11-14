@@ -1,5 +1,5 @@
 @ gr_meter.s - a ten-light gain-reduction meter on the Home divider or along an edge of the screen, for the Deluxe Comp.
-@ Set by the compressor block's GR knobs, sent by the DSP in frame word 218 (tagged 0x6B): GR Thickness (0..20 px; 0, no knobs yet,
+@ Set by the compressor block's GR knobs, sent by the DSP in frame word 218 (tagged 0x6B): Mtr Size (Off, S, M, L, XL; Off, no knobs yet,
 @ or no compressor heard from lately turns it off), GR Position (Middle, Top, Left, Bottom, Right) and GR Direction (Normal is
 @ left to right or top to bottom, Reverse the other way). Middle, Top and Bottom are
 @ 30 px lights at a 32 px pitch, Middle on the divider line in place of its four segments; Left and Right are 21 px lights at a 24 px
@@ -52,9 +52,10 @@ heard:
     str r0, [sp, #12]               @ Position
     ubfx r0, r3, #8, #8
     str r0, [sp, #16]               @ Direction
-    cmp r5, #20
+    cmp r5, #4
     it hi
-    movhi r5, #20
+    movhi r5, #4
+    add.w r5, r5, r5, lsl #2        @ Mtr Size Off, S, M, L, XL: 0, 5, 10, 15, 20 px
     ldr r0, [r4, #4]
     cmp.w r0, #1024
     it hs
