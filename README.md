@@ -20,22 +20,7 @@
 
 &nbsp;
 
-<img src="docs/assets/icons/install.svg" width="40" height="40" alt="">
-
-**Nothing to install**
-
-The setup page builds HXtra from your own firmware file, right in your browser. Nothing is uploaded, and there's no software to set up.
-
-&nbsp;
-
-</td>
-<td width="33%" valign="top">
-
-&nbsp;
-
-<img src="docs/assets/icons/try.svg" width="40" height="40" alt="">
-
-**Try before you install**
+<img src="docs/assets/icons/try.svg" width="40" height="40" align="absmiddle" alt=""> **[Try before you install](https://wisemandenny.github.io/hxtra/web/#try-without-installing)**
 
 Run HXtra from the HX Stomp's memory for one session. Nothing is written to the unit, and a power-cycle brings back what you had.
 
@@ -46,11 +31,20 @@ Run HXtra from the HX Stomp's memory for one session. Nothing is written to the 
 
 &nbsp;
 
-<img src="docs/assets/icons/recover.svg" width="40" height="40" alt="">
-
-**Always recoverable**
+<img src="docs/assets/icons/recover.svg" width="40" height="40" align="absmiddle" alt=""> **[Always recoverable](https://wisemandenny.github.io/hxtra/web/#recovery)**
 
 If an install ever stops at the splash screen, hold Page Right while powering on and reinstall stock with Line 6 Updater. Every feature ran on a real HX Stomp before release.
+
+&nbsp;
+
+</td>
+<td width="33%" valign="top">
+
+&nbsp;
+
+<img src="docs/assets/icons/install.svg" width="40" height="40" align="absmiddle" alt=""> **[Install from your browser](https://wisemandenny.github.io/hxtra/web/)**
+
+The setup page builds HXtra locally from your own firmware file, right in your browser. Nothing is uploaded, and there's no software to set up on your computer.
 
 &nbsp;
 
@@ -64,15 +58,13 @@ If an install ever stops at the splash screen, hold Page Right while powering on
 
 ## Features
 
-Every build has all of these + NAM A2 Lite.
-
-<sub>Every demo was recorded from a real HX Stomp's screen, along with its audio and button presses, then overlaid on a simulated HX Stomp.</sub>
+<sub>*Demos were recorded from a real HX Stomp's screen, along with its audio and button presses, then overlaid on a simulated HX Stomp.*</sub>
 
 ### <img src="docs/assets/icons/tuner.svg" width="28" height="28" align="top" alt=""> Tuner settings
 
 *On the tuner's own third page*
 
-- **Tuner button** (Hold, Press): Hold opens the tuner when you hold TAP; Press opens it with a press, and TAP no longer taps the tempo.
+- **Tuner button** (Hold, Press): "Hold" opens the tuner when you hold TAP (stock behavior); "Press" opens it with a press, and TAP no longer taps the tempo.
 - **Tuner lock** (Off, On): On locks the tuner's other settings (Output, Reference, Type, Trails, Offsets).
 
 <!-- demo: tuner -->
@@ -87,8 +79,8 @@ Every build has all of these + NAM A2 Lite.
 
 *Global Settings › BPM Display*
 
-- **Font size** (XL, L, M, S, Off): the size of the tempo at the top left of the Home screen. Off hides it.
-- **Color** (White, Gray, Red, Orange, Yellow, Green, Cyan, Blue, Purple, Tempo): the tempo's and the beat dot's colour. Tempo follows the TAP footswitch's colour (Tap LED Color).
+- **Font size** (XL, L, M, S, Off): the size of the tempo text at the top left of the Home screen. Off hides it.
+- **Color** (White, Gray, Red, Orange, Yellow, Green, Cyan, Blue, Purple, Tempo): the tempo text's and the beat dot's colour. Tempo follows the TAP footswitch's colour (Tap LED Color).
 - **Dot position** (Left, Right, Both, Off): where the beat dot blinks with TAP, beside the preset number. Off hides it; with both Off the BPM display is off.
 
 <!-- demo: bpm -->
@@ -112,7 +104,7 @@ Every build has all of these + NAM A2 Lite.
 
 - **Color** (White, Red, Green, Blue, Fire, Ice, Sunset, Ocean, Aurora, Neon, Rainbow): the colour or gradient of the line across the middle of the Home screen.
 - **Type** (Off, Steady, Breathe, Cylon, Comet, Heart, Sparkle): how it moves; Off gives back the stock line.
-- **Speed** (1–10, Tempo): one cycle takes 8 s at 1 and 0.8 s at 10; Tempo follows the tempo, a beat a cycle for Heart, two for Breathe, Cylon and Comet, four for Steady, eight for Sparkle.
+- **Speed** (1–10, Tempo): the speed of the animation. 1 = 8s/cycle, 10 = 0.8s/cycle; Tempo follows the tempo.
 
 <!-- demo: breathing-line -->
 <details>
@@ -131,8 +123,6 @@ Every build has all of these + NAM A2 Lite.
 
 ### <img src="docs/assets/icons/dsp-usage.svg" width="32" height="32" align="top" alt=""> DSP meter
 
-*No settings*
-
 - Each block shows its share of the DSP, and the top right corner the total, in the Edit view and in the model browser.
 
 <!-- demo: dsp-usage -->
@@ -145,11 +135,11 @@ Every build has all of these + NAM A2 Lite.
 
 ### <img src="docs/assets/icons/gr-meter.svg" width="28" height="28" align="top" alt=""> Gain reduction meter
 
-*Knobs on the Deluxe, LA Studio, Kinky, Ampeg Opto, Rochester and Red Squeeze compressors*
+*New settings on all compressors except 3-Band Compressor*
 
-- **Mtr Size** (Off, S, M, L, XL): the meter's thickness, 5, 10, 15 or 20 pixels; Off is the default. A preset saved with an older build's Mtr Thk opens at S for 1 px, M for 2, L for 3 and XL for 4 or more.
-- **Mtr Pos** (Middle, Top, Left, Bottom, Right): where on the Home screen the meter lights up to show how much the compressor is reducing the gain. Middle takes the place of the line across the middle.
-- **Mtr Dir** (Normal, Reverse): Normal fills left to right or top to bottom; Reverse the other way.
+- **Mtr Size** (Off, S, M, L, XL): the meter's thickness. Each size is an additional 5px; off disables the meter.
+- **Mtr Pos** (Middle, Top, Left, Bottom, Right): Location of the meter on the Home screen. Middle takes the place of the line across the middle, and disables breathing line.
+- **Mtr Dir** (Normal, Reverse): Normal fills left to right or top to bottom; Reverse the other way. Useful for Left/Right position settings.
 
 <!-- demo: gr-meter -->
 <details>
@@ -161,9 +151,9 @@ https://github.com/user-attachments/assets/50b5cd91-f578-4252-a1df-4b73d8ca1995
 
 ### <img src="docs/assets/icons/long-press.svg" width="28" height="28" align="top" alt=""> Virtual footswitches
 
-*Five extra footswitches, FS6 … FS10, that come with Footswitch long press*
+*Global Settings › Footswitches*
 
-- **Assign a block**: in the block's Bypass Assign, press Page › once to see MIDI In, then turn MIDI In up from Off: FS6 is one click up, FS10 five, and while it's on one of them the knob reads FootswIn. The preset keeps the assignment.
+- **Assign a block**: in the block's Bypass Assign, press Page › once to see MIDI In, then turn MIDI In up from Off: FS6 is one click up, FS10 five
 - **Parameters**: assign one to the same FS in Controller Assign, and it follows the footswitch too.
 - **MIDI**: **underneath, FS6 … FS10 are MIDI CC 20 … 24.** HX Edit shows them that way, and a MIDI controller sending those CCs switches them as well.
 
@@ -180,7 +170,7 @@ https://github.com/user-attachments/assets/50b5cd91-f578-4252-a1df-4b73d8ca1995
 
 - **FS1 … FS5 Hold** (Off, Tuner, FS4, FS5, FS6 … FS10): what holding that footswitch for a second does in Stomp mode. FS6 … FS10 are virtual footswitches: assign blocks to them in Bypass Assign.
 - **FS6 … FS10 Function** (Tuner, Stomp, Bank Up, Bank Dn, PresetUp, PresetDn, SnpshtUp, SnpshtDn, FS Mode&gt;, &lt;FS Mode, AllBypas, TogglEXP): what that virtual footswitch does, as FS3 … FS5 Function do for the real ones. Stomp, the default, toggles its blocks.
-- **Switch a virtual footswitch**: hold the footswitch whose Hold is set to that FS. By default, holding FS1 switches FS6, and so on up to FS5 and FS10. A tap still toggles the footswitch's own blocks.
+- **Switch a virtual footswitch**: hold the footswitch whose Hold is set to that FS. By default, holding FS1 switches FS6, and so on up to FS5 and FS10.
 
 <!-- demo: long-press -->
 <details>
@@ -192,9 +182,7 @@ https://github.com/user-attachments/assets/50b5cd91-f578-4252-a1df-4b73d8ca1995
 
 ### <img src="docs/assets/icons/snapshots.svg" width="104" height="32" align="top" alt=""> More snapshots
 
-*No settings*
-
-- Six snapshots a preset: press the lit snapshot footswitch again to flip between snapshots 1–3 and 4–6.
+- Six snapshots per preset: press the lit snapshot footswitch again to flip between snapshots 1–3 and 4–6.
 - Once a preset has snapshots 4–6, next and previous snapshot (SnpshtUp, SnpshtDn, MIDI CC 69) step through all six: next on 3 goes to 4, and next on 6 back to 1.
 - MIDI CC 69 selects any of the six directly: values 0–2 for snapshots 1–3, 3–5 for 4–6.
 
@@ -210,7 +198,7 @@ https://github.com/user-attachments/assets/50b5cd91-f578-4252-a1df-4b73d8ca1995
 
 *Global Settings › Displays*
 
-- **Tap LED Color** (Red, DkOrange, LtOrange, Yellow, Green, Teal, Blue, Violet, Pink, White, Rainbow, Random): the colour of the TAP footswitch's blinking ring, and of its icon and label on the Home screen. Red is the stock colour. Rainbow fades the ring a small step round the colour wheel at each beat, from red through orange, yellow, green, blue, indigo and violet and back; Random picks a new colour at each beat. Both keep the label white.
+- **Tap LED Color** (Red, DkOrange, LtOrange, Yellow, Green, Teal, Blue, Violet, Pink, White, Rainbow, Random): the colour of the TAP footswitch's blinking LED ring, and the icon and label of TAP/TUNER on the Home screen. Rainbow fades the ring a small step through the rainbow on each beat; Random picks a new colour at each beat. Both keep the label white.
 
 <!-- demo: tap-color -->
 <details>
@@ -241,7 +229,7 @@ https://github.com/user-attachments/assets/f25be41c-3ab0-45a1-87fa-99cd50194933
 
 *No settings*
 
-- Each block's title in the model browser and the Edit view names the gear it's based on: Deez One Mod becomes Boss DS-1 Mod. Line 6 originals keep theirs.
+- Renames all blocks to match the gear they were based on: e.g. Deez One Mod becomes Boss DS-1 Mod.
 
 <!-- demo: real-names -->
 <details>
@@ -255,10 +243,6 @@ https://github.com/user-attachments/assets/f25be41c-3ab0-45a1-87fa-99cd50194933
 
 - [Neural Amp Modeler](https://www.neuralampmodeler.com) captures on the HX Stomp's own DSP, from [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite). The setup page converts your `.nam` files.
 
-### <img src="docs/assets/icons/boot-screen.svg" width="28" height="28" align="top" alt=""> Custom boot screen
-
-- "HXtra STOMP" out of the box, or [your own picture and boot text](docs/features.md#boot-screen-hx-stomp-only), emoji included, from the command-line build.
-
 <div align="center">
 
 <a href="docs/features.md"><img src="docs/assets/feature-guide.svg" alt="Read the feature guide" width="45%"></a>
@@ -271,16 +255,16 @@ https://github.com/user-attachments/assets/f25be41c-3ab0-45a1-87fa-99cd50194933
 <tr>
 <td width="50%" valign="top">
 
-### <img src="docs/assets/icons/dev-pipeline.svg" width="28" height="28" align="top" alt=""> From Python to HX Stomp
-A feature is a Python module: it names the stock functions it hooks, declares its settings, and generates any tables its code needs, like Tap LED color's 42 rainbow shades. Its on-device code is Cortex-M4 assembly, which `m4asm` turns into position-independent machine code with `clang`. The engine places that code in free space in the firmware, points each hooked call at it, then rebuilds the `.hxf` and fixes its checksums. The result runs on the HX Stomp from RAM over USB, or installs with Line 6 Updater. The setup page runs the same Python in your browser, with the machine code assembled ahead of time at each release.
+### <img src="docs/assets/icons/dev-module.svg" width="28" height="28" align="top" alt=""> Feature modules
+Each feature is one Python module in `tools/features/` with its Cortex-M4 code in `src/m4/`, and the build automatically finds it.
 
 &nbsp;
 
 </td>
 <td width="50%" valign="top">
 
-### <img src="docs/assets/icons/dev-module.svg" width="28" height="28" align="top" alt=""> One feature, one module
-A feature is `tools/features/<name>.py`, plus its Cortex-M4 code in `src/m4/<name>.s`, assembled at build time. It declares its build switch, settings, Global Settings title and icon, and whether the setup page offers it. The build finds every module in the folder: there's no list to register it in.
+### <img src="docs/assets/icons/dev-hooks.svg" width="28" height="28" align="top" alt=""> Hook layer
+Features reach the firmware only through hooks that the patcher, `tools/patch_menu.py`, lets them share, and every write checks the stock bytes first, so a clash fails the build, not the unit.
 
 &nbsp;
 
@@ -289,16 +273,16 @@ A feature is `tools/features/<name>.py`, plus its Cortex-M4 code in `src/m4/<nam
 <tr>
 <td valign="top">
 
-### <img src="docs/assets/icons/dev-hooks.svg" width="28" height="28" align="top" alt=""> Hook layer
-Features reach the firmware only through the engine. Several can share one hook (`chain_ptr`, `chain_bl`, `chain_entry`): the Home screen's paint already runs five. A site that can't be shared is claimed by one feature (`own_entry`, `own_call`). Every write checks the stock bytes first, and an overlap fails the build, not the unit.
+### <img src="docs/assets/icons/dev-settings.svg" width="28" height="28" align="top" alt=""> Virtual global settings
+The patcher makes up its own setting IDs and packs their values into unused records the HX Stomp already saves, increasing the capacity from 10 settings to 46.
 
 &nbsp;
 
 </td>
 <td valign="top">
 
-### <img src="docs/assets/icons/dev-settings.svg" width="28" height="28" align="top" alt=""> Virtual Global Settings
-The HX Stomp saves each Global Setting under a numbered ID, and the stock firmware has only about ten IDs it doesn't use. The first few features used them all up, which would have capped HXtra at a handful of settings. So the engine makes up its own IDs: it answers for them inside the firmware's own settings code, and packs their values into twelve unused setting records that the HX Stomp still saves with everything else. That makes room for 46 settings, 20 used so far. A feature just lists its settings as `Setting(key, label, values, default)`, each feature gets its own section, and the section strip scrolls to fit them all.
+### <img src="docs/assets/icons/dev-pipeline.svg" width="28" height="28" align="top" alt=""> From Python to HX Stomp
+`tools/m4asm.py` assembles each feature's code with `clang`, the patcher places it in free space in the firmware and points the hooked stock calls at it, and `tools/hxf.py` packs the result into a new `.hxf`.
 
 &nbsp;
 
@@ -308,7 +292,7 @@ The HX Stomp saves each Global Setting under a numbered ID, and the stock firmwa
 <td valign="top">
 
 ### <img src="docs/assets/icons/dev-tested.svg" width="28" height="28" align="top" alt=""> Emulated first
-Every feature's M4 code runs in an emulator before it runs on a unit: [unicorn](https://www.unicorn-engine.org) as a Cortex-M4 (`tests/m4emu.py`), with Python stubs for the firmware functions it calls. A missing stub, a loop or a clobbered register fails a test, not the HX Stomp. A firmware test pins the MD5 of the whole build, so no byte changes by accident.
+Every feature's M4 code runs on an emulated Cortex-M4 ([unicorn](https://www.unicorn-engine.org), `tests/m4emu.py`) before it runs on a unit, and a pinned MD5 of the whole build catches any byte that changes by accident.
 
 &nbsp;
 
@@ -316,7 +300,7 @@ Every feature's M4 code runs in an emulator before it runs on a unit: [unicorn](
 <td valign="top">
 
 ### <img src="docs/assets/icons/dev-mirror.svg" width="28" height="28" align="top" alt=""> Screen mirror and demo videos
-A developer build (`HX_SCREEN_MIRROR=1`) streams the HX Stomp's screen over USB, through the channel HX Edit uses, to a window on a Mac at 15 frames a second. `tools/hx_mirror.py` records it with every footswitch, knob and button event, and renders a demo video: the screen set into a photo of the unit (your own copy in `build/art/`, never committed), its controls moving and its footswitch LEDs lighting in time, as an MP4 small enough to attach on GitHub, and a looping GIF of any part of it. Scripts can drive the unit while it records.
+A developer build streams the HX Stomp's screen over USB, and `tools/hx_mirror.py` records it with every control event and renders the demo videos in this README.
 
 &nbsp;
 
@@ -330,40 +314,22 @@ A developer build (`HX_SCREEN_MIRROR=1`) streams the HX Stomp's screen over USB,
 
 </div>
 
-## AI policy
+## Why use AI?
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-### <img src="docs/assets/icons/ai-why.svg" width="28" height="28" align="top" alt=""> Why AI
-Before a feature can be written, someone has to work out which of thousands of unnamed functions draws the Home screen, how a setting is stored, or what a message between its two processors looks like. Then the change is written as hand-placed machine code that fits into gaps in the existing firmware. This is the kind of tedious, miserable, fragile programming that gives most engineers nightmares. AI made it possible for me to do in one week what would likely have taken me over a year by hand.
-
-&nbsp;
-
-</td>
-<td width="50%" valign="top">
-
-### <img src="docs/assets/icons/ai-map.svg" width="28" height="28" align="top" alt=""> 100% reverse engineered
+### 100% reverse engineered
 The HX Stomp has no SDK, no documentation, no source code and no debug symbols. Everything HXtra changes had to be found first by reading raw disassembly of a stripped binary that runs on two processors: the Cortex-M4 that runs the screen and footswitches, and the SHARC DSP that processes the audio.
 
 &nbsp;
 
 </td>
-</tr>
-<tr>
 <td valign="top">
 
-### <img src="docs/assets/icons/ai-unit.svg" width="28" height="28" align="top" alt=""> All features verified by hand
-I loaded every test build onto my own HX Stomp, played through it, watched the screen and reported back what was actually happening, which is where most bugs were caught. Animation speeds, colours and the click's volume were tuned by eye and ear on the unit, over many rounds.
-
-&nbsp;
-
-</td>
-<td valign="top">
-
-### <img src="docs/assets/icons/ai-person.svg" width="28" height="28" align="top" alt=""> Human in charge
-The AI did not build this by itself. Working with an AI coding assistant is closer to directing a very fast junior engineer than to pressing a button. It reads disassembly and writes code far faster than I can, but it can be confidently wrong, and it can't touch the pedal, see its screen or hear it. I chose every feature and decided how each should look, feel and behave, and I killed or shelved ideas that turned out to be unsafe or not worth the risk.
+### AI only writes code
+One person chose every feature and decided how each should look, feel and behave, and shelved ideas that were unsafe or not worth the risk. I loaded every test build onto my own HX Stomp, played through it and watched the screen, which is where most bugs were caught, and tuned animation speeds, colours and the click's volume by eye and ear. All AI did is write the code.
 
 &nbsp;
 
@@ -378,15 +344,18 @@ The AI did not build this by itself. Working with an AI coding assistant is clos
 <td width="50%" valign="top">
 
 ### <img src="docs/assets/icons/faq-stock.svg" width="28" height="28" align="top" alt=""> How do I go back to stock firmware?
-Install the stock `HX_Stomp_v3.80.0_0x103966115.hxf` with Line 6 Updater, the same way you installed HXtra. If it stops at the splash screen, power it off, **hold Page Right while powering it on** to start it in update mode, and install the stock file from there.
+[See the recovery guide on the setup page](https://wisemandenny.github.io/hxtra/web/#recovery)
 
 &nbsp;
 
 </td>
 <td width="50%" valign="top">
 
-### <img src="docs/assets/icons/faq-presets.svg" width="28" height="28" align="top" alt=""> Will my presets still work?
-Presets made on stock firmware open in HXtra. A preset saved with snapshots 4–6 still loads on stock firmware, as snapshots 1–3. HX Edit opens, exports and imports HXtra presets, but its exports (`.hlx`) and backups (`.hxb`) hold snapshots 1–3 only. Presets saved with a NAM build from before HXtra (preset IDs 147 and 148) need their NAM block added again. Back up before you install either way.
+### <img src="docs/assets/icons/faq-presets.svg" width="28" height="28" align="top" alt=""> Will this break my presets?
+- **No.** Presets made on stock firmware open in HXtra.
+- A preset saved with snapshots 4–6 still loads on stock firmware, as snapshots 1–3.
+- HX Edit opens, exports and imports HXtra presets, but its exports (`.hlx`) and backups (`.hxb`) hold snapshots 1–3 only.
+- Presets made with an older release of [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite) won't load their NAM blocks in HXtra, so add NAM to those presets again. Presets from its current release open as they are.
 
 &nbsp;
 
@@ -395,8 +364,8 @@ Presets made on stock firmware open in HXtra. A preset saved with snapshots 4–
 <tr>
 <td valign="top">
 
-### <img src="docs/assets/icons/faq-dsp.svg" width="28" height="28" align="top" alt=""> Does HXtra use up my DSP?
-Most features run on the HX Stomp's UI processor, not the audio DSP, so they leave your DSP budget alone. The Metronome is a block with a DSP cost of its own, and builds with the gain-reduction meter run NAM A2 Lite on up to two blocks instead of three.
+### <img src="docs/assets/icons/faq-dsp.svg" width="28" height="28" align="top" alt=""> Does HXtra use up extra DSP?
+**No.** DSP usage is only marginally affected by the compressor gain reduction meter and the metronome block. If you notice any audio crackling, disable those features.
 
 &nbsp;
 
@@ -404,7 +373,7 @@ Most features run on the HX Stomp's UI processor, not the audio DSP, so they lea
 <td valign="top">
 
 ### <img src="docs/assets/icons/faq-choose.svg" width="28" height="28" align="top" alt=""> Can I choose which features I get?
-The setup page builds every feature, plus Real block names if you tick their box. Several can be switched off on the unit: Breathing line Type **Off** gives back the stock line, and the gain-reduction meter stays off until you give it a thickness. To leave a feature out of the firmware altogether, build it with `build.py` and its switches: see [Building HXtra](docs/building.md).
+The setup page builds every feature, plus Real block names if you tick their box. To leave a feature out of the firmware altogether, [build it yourself](docs/building.md).
 
 &nbsp;
 
@@ -414,7 +383,12 @@ The setup page builds every feature, plus Real block names if you tick their box
 <td valign="top">
 
 ### <img src="docs/assets/icons/faq-platforms.svg" width="28" height="28" align="top" alt=""> Which operating systems are supported?
-The setup page builds HXtra on Windows, macOS and Linux, in any modern browser; its Run from RAM step needs Chrome or Edge. Installing uses Line 6 Updater, which runs on Windows and macOS. Building from the command line with features needs clang to assemble their code: Apple's Command Line Tools on a Mac, or clang on Linux and WSL (`apt install clang`). Both give the same build, MD5 included.
+*Only macOS and Windows are fully supported.*
+
+- The setup page builds HXtra on Windows, macOS and Linux, in any modern browser.
+- Its Run from RAM step needs Chrome or Edge.
+- Installing uses Line 6 Updater, which runs on Windows and macOS.
+- Building from the command line needs clang to assemble the features' code: Apple's Command Line Tools on a Mac, or clang on Linux and WSL (`apt install clang`). Both give the same build, MD5 included.
 
 &nbsp;
 
@@ -422,7 +396,14 @@ The setup page builds HXtra on Windows, macOS and Linux, in any modern browser; 
 <td valign="top">
 
 ### <img src="docs/assets/icons/faq-legal.svg" width="28" height="28" align="top" alt=""> Is this legal?
-No Line 6 code or data is in this repository, and no firmware is distributed. You bring your own copy of the official firmware, and the build changes it on your computer. Please don't share the built `.hxf`: it is Line 6's firmware with changes, and it isn't yours or ours to give away. No NAM captures are included either; you bring your own.
+*This isn't legal advice, and where you live matters.*
+
+- **No locks are broken.** The firmware isn't encrypted or signed, so HXtra doesn't violate copy protection. That is what anti-circumvention laws such as the US DMCA (§1201) forbid.
+- **Reverse engineering for compatible software is protected** in the US (*Sega v. Accolade*), the EU (Software Directive, Articles 5(3) and 6), the UK (CDPA ss. 50B and 50BA) and Canada (Copyright Act s. 30.61).
+- **This repo does not contain Line 6 IP** The patcher holds only addresses, table layouts and a few short runs of stock bytes it checks before writing. You bring your own copy of the official firmware, and the build changes it on your computer.
+- **Changing the firmware on your own unit** is private use. US law lets the owner of a program's copy adapt it to run it on their machine (17 U.S.C. §117), other countries are less clear, and Line 6's license terms may forbid it: that is a contract matter between you and Line 6.
+- **Don't share the built `.hxf`.** It is Line 6's firmware with changes, and passing it on would infringe their copyright.
+- No NAM captures are included either; you bring your own.
 
 &nbsp;
 
@@ -440,7 +421,6 @@ Found something else? [Open an issue](https://github.com/wisemandenny/hxtra/issu
 ## Acknowledgements
 
 - **[Derek Bui (nocaseguy)](https://github.com/nocaseguy)**, for [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite), the foundation HXtra is forked from. It brought the SHARC assembler and simulator, the NAM A2 Lite kernel, the firmware container tools, the RAM loader and the setup page, and it showed that the HX Stomp's firmware can be changed safely.
-- **[Scott (scottlynn73)](https://github.com/scottlynn73)**, for [hx-effects-nam-lite](https://github.com/scottlynn73/hx-effects-nam-lite), the HX Effects port.
 - **[ghidra-sharc](https://github.com/roblg/ghidra-sharc)**, whose SHARC opcode tables the assembler adapts.
 - **[Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler)**, by Steven Atkinson.
 - **[Jason Shimmy](https://jasonshimmy.com/)**, for [HelixHelp](https://helixhelp.com/), whose model list gives Real block names the gear each model is based on.
