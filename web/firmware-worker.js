@@ -28,7 +28,7 @@ var STOCK_MD5 = {
   "7c2ebdf1bffb6bcc5f89dda97f91e40c": "HX_Effects",
 };
 var BUILT_MD5 = {
-  "HX_Stomp": "3e21687c9518ac6e3ffff1508420ce62",
+  "HX_Stomp": "195682572258a3347d94ca7610a697b8",
   "HX_Stomp_XL": "8918ab60ebff62ebfccd4fccb2bed85a",
   "HX_Effects": "2efb98791581b67116ba82c5ecd30ea2",
 };
@@ -44,6 +44,7 @@ var STEPS = {
     ["add-fx-model", "--knobs", "eq", "--name", "HD2_DistNAMLite", "--display-name", "NAM A2 Lite", "--category", "distortion", "--folder", "NAM", "--preset-id", "555", "--dsp-cost", "2275", "--sdram-words", "0x5000", "--dm-words", "0x303", "--pm-words", "0x147"],
     ["move-folder", "--name", "NAM", "--from", "2", "--to", "12"],
     ["ir-title", "--fx-preset-id", "555", "--knob", "6"],
+    ["model-int"],
   ],
   "HX_Stomp_XL": [
     ["remove-model", "--preset-id", "555"],

@@ -167,7 +167,7 @@ A gain-reduction meter on the Home screen, lit by the compressor you turn it on 
 
 | Knob | Values | What it does |
 |---|---|---|
-| **Mtr Thk** | 0 … 20 (default **0**, off) | The meter's thickness in pixels; 0 turns it off. |
+| **Mtr Size** | Off, S, M, L, XL (default **Off**) | The meter's thickness: 5, 10, 15 or 20 pixels. A preset saved with an older build's Mtr Thk opens at S for 1 px, M for 2, L for 3 and XL for 4 or more. |
 | **Mtr Pos** | **Middle** (default), Top, Left, Bottom, Right | Where on the Home screen the meter lights up. Middle takes the place of the line across the middle. |
 | **Mtr Dir** | **Normal** (default), Reverse | Normal fills left to right or top to bottom; Reverse the other way. |
 
@@ -193,10 +193,11 @@ This also changes the image store (part 8 of the 15), and with emoji, the font t
 
 ## NAM A2 Lite
 
-From upstream [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite), unchanged in this fork: [Neural Amp Modeler](https://www.neuralampmodeler.com) A2 Lite captures running on the HX Stomp's own DSP. The setup page converts your `.nam` files into User IRs the block reads.
+From upstream [hx-stomp-nam-lite](https://github.com/nocaseguy/hx-stomp-nam-lite), unchanged in this fork but for how the Model knob reads: [Neural Amp Modeler](https://www.neuralampmodeler.com) A2 Lite captures running on the HX Stomp's own DSP. The setup page converts your `.nam` files into User IRs the block reads.
 
 - **Where:** Amp > NAM, a block with ten knobs and a tone stack. It sits on Xenomorph Fuzz Mono's preset ID 555 (that stock model is removed), so HX Edit keeps NAM blocks, and presets made with either build open with the other.
 - **Older presets:** presets saved with an earlier NAM build (preset IDs 147 and 148) don't open NAM A2 Lite in this one: re-add the block in those presets.
+- **Model** reads as the slot number, 4 rather than 4.0, on the HX Stomp. A value between slots (from a MIDI controller) reads as the slot that plays. The HX Stomp XL still reads 4.0.
 - **Captures:** none are included. You bring your own `.nam` files, and their licences are up to their authors.
 
 Upstream's [CHANGELOG.md](../CHANGELOG.md) has the NAM changes.

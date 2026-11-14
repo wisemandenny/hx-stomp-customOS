@@ -271,6 +271,13 @@ def stock_l6ia():
     return pa.load_l6ia_from_any(stock)[0]
 
 
+def test_gr_knob_names_and_values_fit_the_screen():
+    # stock short names run to 8 characters ("Hi Shelf"); the 9-character "Meter Thk" did not display
+    for _, _, short, labels, _ in pc.GR_KNOBS:
+        assert len(short) <= 8 and all(len(v) <= 8 for v in labels)
+    assert pc.GR_KNOBS[2][2:4] == ('Mtr Size', ('Off', 'S', 'M', 'L', 'XL'))
+
+
 @pytest.fixture(scope='module')
 def comp_patched():
     data = stock_l6ia()
@@ -289,6 +296,8 @@ def test_comp_models_get_the_three_knobs(comp_patched, model, prim):
     # integer lists: their raw words, which the parser reads as floats
     assert [tuple(f2u(p[k]) for k in ('min', 'max', 'default')) for p in m['params'][n:]] == [(0, len(k[3]) - 1, k[4]) for k in pc.GR_KNOBS]
     assert [p['name'] for p in m['params'][:n]] == [p['name'] for p in old_m['params']]
+    size = m['params'][n + 2]['meta']
+    assert (size['displayNameShort'], size['0'], size['4'], size.get('5')) == ('Mtr Size', 'Off', 'XL', None)
 
     e4 = pa.get_entry_swapped(new, 4)
     w4 = struct.unpack(f'<{len(e4) // 4}I', e4)
@@ -411,8 +420,8 @@ def test_comp_patch_refuses_a_second_run(comp_patched):
 # ---- the whole GR build, pinned as tests/test_firmware.py pins the default one
 
 GR_BUILT_MD5 = {
-    'HX_GR': '9c9b866bedc9a0dc25cceb5d23e273d3',
-    'HX_GR HX_CLICK': 'd74881d6341ccaa47358882173cec214',    # patch_click.py adds a model, which would drop knobs written before it
+    'HX_GR': 'f0a484217c5b15671fe5002d16b899d1',
+    'HX_GR HX_CLICK': '40a28fe3d48fc52e1bec8d6d17cd8519',    # patch_click.py adds a model, which would drop knobs written before it
 }
 
 
@@ -432,7 +441,7 @@ def test_gr_build(tmp_path, flags):
     assert r.returncode == 0, r.stdout + r.stderr
     shown = 'gr, metronome, splash; Entry 7; Entry 8' if 'HX_CLICK' in flags else 'gr, splash; Entry 8'     # the Metronome's off icon; the boot picture
     assert 'ALL OK' in r.stdout and f'Entry 0: features {shown}\n' in r.stdout
-    assert r.stdout.count(': Mtr Position, Mtr Direction, Mtr Thickness on slots') == len(pc.COMP_MODELS)
+    assert r.stdout.count(': Mtr Position, Mtr Direction, Mtr Size on slots') == len(pc.COMP_MODELS)
     assert hashlib.md5(out.read_bytes()).hexdigest() == GR_BUILT_MD5[flags]
     assert len(pa.get_entry_swapped(pa.load_l6ia_from_any(str(out))[0], 3)) <= DEFAULT_E3
 
@@ -553,7 +562,7 @@ class Meter:
         """The widget setters the last frame called."""
         return [at for at, _ in self.m.log if at in SETTERS]
 
-    def frame(self, a_peak, b_peak, window, pos=0, dir_=0, thk=20, release=0.5, knobs=True):
+    def frame(self, a_peak, b_peak, window, pos=0, dir_=0, thk=4, release=0.5, knobs=True):
         w = [0] * 256
         w[200] = 0xf00d600d
         w[218] = rot16(0x6B000000 | pos << 16 | dir_ << 8 | thk) if knobs else 0
@@ -682,6 +691,14 @@ def test_m4_off_without_knobs_or_at_thickness_0(m4emu):
     assert lit(m) == 0
     m.frame(1.0, 0.1, window=2, pos=1, knobs=False)
     assert lit(m) == 0
+
+
+@pytest.mark.parametrize('thk, px', [(1, 5), (2, 10), (3, 15), (4, 20), (7, 20)])
+def test_m4_mtr_size_steps_are_5_px(m4emu, thk, px):
+    # 7: a preset saved when the knob was Mtr Thk 0..20
+    m = Meter(m4emu)
+    m.frame(1.0, 0.1, window=1, pos=1, thk=thk)
+    assert m.m.u32(MODULE + m.sym['widgets'] + 16) == px
 
 
 def test_m4_handlers_through_the_chain_stubs(m4emu):

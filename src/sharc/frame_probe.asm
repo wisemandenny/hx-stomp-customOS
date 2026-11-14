@@ -49,9 +49,9 @@ ORI_TAB:  .space 16                     // the state (I0) of each core whose out
 LA_ATT:   .word 0x3F7CABBA                // the meter's fixed Attack and Release for the LA Studio Comp (10 ms, 500 ms), as per-sample coefficients
 LA_REL:   .word 0x3F7FEED8
 GR_PACK:  .space 1
-GR_CORE:  .space 1                      // the state (I0) of the core the meter shows: the last whose Mtr Thk was set above 0
+GR_CORE:  .space 1                      // the state (I0) of the core the meter shows: the last whose Mtr Size was set above Off
 GR_MISS:  .space 1                      // other cores' calls since it last ran: past 64 it is gone (another preset)
-KN_TAB:   .space 65                     // per core: its state, then its Mtr Pos, Dir and Thk; then the next entry to replace
+KN_TAB:   .space 65                     // per core: its state, then its Mtr Pos, Dir and Size; then the next entry to replace
 KK_TAB:   .space 65                     // per 0x2710 core: its state, its Attack and Release as the meter's coefficients, 0; then the next
 FC_R3:    .space 1
 FS_BASE:  .space 1
@@ -605,7 +605,7 @@ fc_int:
     IF EQ JUMP fc_koff;
     DM(GR_CORE) = R0;
     JUMP fc_kn1;
-fc_koff:                                // the metered core's Mtr Thk to 0: the meter goes to another core with one above 0, if any
+fc_koff:                                // the metered core's Mtr Size to Off: the meter goes to another core with one above Off, if any
     R2 = DM(GR_CORE);
     COMP(R2, R0);
     IF NE JUMP fc_kn1;
