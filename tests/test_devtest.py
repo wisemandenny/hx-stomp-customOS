@@ -152,7 +152,33 @@ def test_every_case_has_a_name_and_a_description():
     names = [n for n, _, _ in dt.CASES]
     assert len(names) == len(set(names)) and all(what for _, what, _ in dt.CASES)
     assert {'harness', 'bpm', 'tap_color', 'breathing_line', 'dsp_meter', 'real_names', 'tuner', 'long_press', 'more_snapshots',
-            'metronome', 'nam', 'gr'} <= set(names)
+            'metronome', 'nam', 'gr', 'global_eq'} <= set(names)
+
+
+# Global Settings > Footswitches: FS1..FS3 Hold on one page (FS1 Hold's value reads FS6), FS6..FS8 Function on a later one
+HOLD_PAGE = [('Footswitches', 100, 120, 120, 20), ('FS6', 30, 160, 40, 16), ('FS7', 136, 160, 40, 16), ('FS8', 242, 160, 40, 16),
+             ('Function', 15, 200, 80, 16), ('FS1 Hold', 15, 218, 80, 16), ('FS2 Hold', 121, 218, 80, 16)]
+FUNCTION_PAGE = [('Footswitches', 100, 120, 120, 20), ('Stomp 6', 20, 160, 70, 16), ('Function', 121, 200, 80, 16),
+                 ('FS6', 30, 218, 40, 16), ('FS7', 136, 218, 40, 16), ('FS8', 242, 218, 40, 16)]
+
+
+def test_a_knob_is_found_by_its_label_not_by_a_value_that_reads_the_same():
+    u = unit(HOLD_PAGE, HOLD_PAGE, FUNCTION_PAGE)
+    assert dt.label_knob(u, 'FS2 Hold') == 2
+    assert dt.label_knob(u, 'FS6') == 1, 'FS1 Hold\'s value FS6 is not the label'
+    page_right = hm.STOMP['page_right']['press'][1]
+    assert [blob[1] for _, _, blob in u.s.sent] == [page_right, page_right], 'one page right: PAGE▶ pressed, then released'
+    with pytest.raises(dt.Fail, match='no knob labelled'):
+        dt.label_knob(unit(HOLD_PAGE), 'FS9')
+
+
+def test_a_foot_hold_touches_with_the_press_and_holds_both():
+    u = unit(HOME)
+    looked = []
+    dt.foot_hold(u, 'fs1', look=lambda: looked.append(len(u.s.sent)))
+    events = [[(b[i], b[i + 1], b[i + 4]) for i in range(0, len(b), 8)] for _, _, b in u.s.sent]
+    assert events == [[(1, 9, 1), (1, 12, 1)], [(1, 9, 5), (1, 12, 5)], [(1, 12, 2), (1, 9, 2)]], 'touch code 9, press code 12'
+    assert looked == [2], 'looked at the screen right after the holds'
 
 
 def test_a_run_reports_each_case_saves_a_failures_screen_and_reloads_the_preset_it_found(tmp_path, monkeypatch):
