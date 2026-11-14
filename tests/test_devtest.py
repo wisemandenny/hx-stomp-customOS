@@ -152,7 +152,21 @@ def test_every_case_has_a_name_and_a_description():
     names = [n for n, _, _ in dt.CASES]
     assert len(names) == len(set(names)) and all(what for _, what, _ in dt.CASES)
     assert {'harness', 'bpm', 'tap_color', 'breathing_line', 'dsp_meter', 'real_names', 'tuner', 'long_press', 'more_snapshots',
-            'metronome', 'nam', 'gr'} <= set(names)
+            'metronome', 'metronome_bypass', 'nam', 'gr'} <= set(names)
+
+
+def test_teal_is_the_volume_blocks_ring_lit_or_dim_and_not_white_or_grey():
+    assert dt.teal(0xb5ce3c) and dt.teal(0x5d6621), 'the Metronome colours as 0xBBGGRR, lit and dim'
+    assert not dt.teal(0xffffff) and not dt.teal(0x808080) and not dt.teal(0x0300ff) and not dt.teal(0)
+
+
+def test_a_ring_is_waited_for_until_it_is_wanted():
+    u = unit(HOME)
+    seen = iter([[(0xffffff, 1)] * 3, [(0xffffff, 1)] * 3, [(0xb5ce3c, 1)] * 3])
+    u.leds = lambda: next(seen)
+    assert dt.ring(u, 1, want=lambda c, mode: dt.teal(c)) == (0xb5ce3c, 1)
+    u.leds = lambda: [(0xffffff, 1)] * 3
+    assert dt.ring(u, 0, timeout=0, want=lambda c, mode: dt.teal(c)) == (0xffffff, 1), 'the last one when time is up'
 
 
 def test_a_run_reports_each_case_saves_a_failures_screen_and_reloads_the_preset_it_found(tmp_path, monkeypatch):
